@@ -21,6 +21,26 @@ De repository is ingericht als een HACS custom integration. Voor installatie via
 
 Voor lokaal testen kan de map `custom_components/ev_smart_charge` rechtstreeks naar `/config/custom_components/` worden gekopieerd.
 
+## Versies en updates
+
+De integratie gebruikt GitHub-tags en releases. HACS toont daardoor versies in plaats van alleen losse commits.
+
+De huidige stabiele versie is:
+
+```text
+v0.3.0
+```
+
+Na een nieuwe release:
+
+1. Open HACS.
+2. Ga naar `Integraties → Updates`.
+3. Kies `EV Smart Charge Planner`.
+4. Installeer de nieuwe versie.
+5. Herstart Home Assistant.
+
+Gebruik voor testen bij voorkeur eerst een nieuwere release in HACS. De `main`-branch bevat ontwikkelwijzigingen die nog niet als stabiele versie zijn gemarkeerd.
+
 ## Telegram instellen
 
 De integratie gebruikt de bestaande Telegram-integratie van Home Assistant. Er wordt geen bot-token in deze integratie opgeslagen.
