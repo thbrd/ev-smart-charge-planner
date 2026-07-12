@@ -17,13 +17,41 @@ class EvSmartChargePanel extends HTMLElement {
     this._panel = value;
   }
 
+  _resolveEntity(entityId) {
+    if (!this._hass?.states || !entityId) return entityId;
+    if (this._hass.states[entityId]) return entityId;
+
+    const separator = entityId.indexOf(".");
+    if (separator < 0) return entityId;
+    const domain = entityId.slice(0, separator);
+    const objectId = entityId.slice(separator + 1);
+    const prefix = "ev_smart_charge_";
+    const suffix = objectId.startsWith(prefix) ? objectId.slice(prefix.length) : objectId;
+    if (!suffix) return entityId;
+
+    const match = Object.keys(this._hass.states).find((candidate) => {
+      if (!candidate.startsWith(`${domain}.`)) return false;
+      const candidateObjectId = candidate.slice(domain.length + 1);
+      return candidateObjectId === suffix || candidateObjectId.endsWith(`_${suffix}`);
+    });
+    return match || entityId;
+  }
+
   _state(entityId, fallback = "—") {
-    const state = this._hass?.states?.[entityId];
+    const state = this._hass?.states?.[this._resolveEntity(entityId)];
     return state ? state.state : fallback;
   }
 
   _attributes(entityId) {
-    return this._hass?.states?.[entityId]?.attributes || {};
+    return this._hass?.states?.[this._resolveEntity(entityId)]?.attributes || {};
+  }
+
+  _integrationConfigured() {
+    const states = this._hass?.states || {};
+    return Object.keys(states).some((entityId) => {
+      const objectId = entityId.split(".").slice(1).join(".");
+      return objectId === "ev_smart_charge" || objectId.includes("_ev_smart_charge_") || objectId.startsWith("ev_smart_charge_");
+    });
   }
 
   _time(value) {
@@ -124,7 +152,7 @@ class EvSmartChargePanel extends HTMLElement {
     this.shadowRoot.querySelectorAll("[data-text-entity]").forEach((input) => {
       input.addEventListener("change", () => {
         this._service("text", "set_value", {
-          entity_id: input.dataset.textEntity,
+          entity_id: this._resolveEntity(input.dataset.textEntity),
           value: input.value,
         });
       });
@@ -133,7 +161,7 @@ class EvSmartChargePanel extends HTMLElement {
     this.shadowRoot.querySelectorAll("[data-number-entity]").forEach((input) => {
       input.addEventListener("change", () => {
         this._service("number", "set_value", {
-          entity_id: input.dataset.numberEntity,
+          entity_id: this._resolveEntity(input.dataset.numberEntity),
           value: Number(input.value),
         });
       });
@@ -142,7 +170,7 @@ class EvSmartChargePanel extends HTMLElement {
     const ai = this._state("switch.ev_smart_charge_ai_enabled", "off") === "on";
     this.shadowRoot.querySelector("#ai-enabled")?.addEventListener("change", (event) => {
       this._service("switch", event.target.checked ? "turn_on" : "turn_off", {
-        entity_id: "switch.ev_smart_charge_ai_enabled",
+        entity_id: this._resolveEntity("switch.ev_smart_charge_ai_enabled"),
       });
     });
     const aiInput = this.shadowRoot.querySelector("#ai-enabled");
@@ -180,6 +208,8 @@ class EvSmartChargePanel extends HTMLElement {
         </header>
 
         <div class="notice" role="status"></div>
+
+        ${this._integrationConfigured() ? "" : `<div class="warning"><strong>Integratie nog niet gekoppeld</strong><br>Open Instellingen → Apparaten & diensten → EV Smart Charge Planner en configureer de sensorverbindingen. Daarna verschijnen de entities in dit panel.</div>`}
 
         ${this._card("Live status", `<div class="metrics">
           ${this._metric("Planstatus", "sensor.ev_smart_charge_status")}
@@ -273,6 +303,7 @@ class EvSmartChargePanel extends HTMLElement {
       h2 { font-size:18px; margin:0 0 16px; }
       h3 { font-size:16px; margin:0 0 12px; }
       .muted { color:var(--secondary-text-color); margin:8px 0 0; }
+      .warning { background:var(--warning-color,#ff9800); color:var(--primary-text-color); border-radius:8px; padding:14px 16px; margin-bottom:18px; }
       .card { background:var(--ha-card-background,var(--card-background-color)); border:1px solid var(--divider-color); border-radius:12px; padding:20px; margin-bottom:18px; box-shadow:var(--ha-card-box-shadow,none); }
       .columns { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; }
       .metrics { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }

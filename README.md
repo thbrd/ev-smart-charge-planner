@@ -28,7 +28,7 @@ De integratie gebruikt GitHub-tags en releases. HACS toont daardoor versies in p
 De huidige stabiele versie is:
 
 ```text
-v0.4.1
+v0.4.2
 ```
 
 Na een nieuwe release:
@@ -52,6 +52,8 @@ Open na installatie de opties van de integratie en vul in:
 - `Telegram chat-ID`: vul hier je eigen chat-ID in.
 
 De integratie maakt daarna tekstentiteiten aan waarmee de templates vanuit het dashboard kunnen worden aangepast:
+
+Het sidebar-panel zoekt de eigen entities ook op basis van hun suffix. Daardoor blijven bestaande Home Assistant-object-ID's werken als Home Assistant bij een herinstallatie een extra naamdeel heeft toegevoegd. Als er nog geen entities zichtbaar zijn, moet eerst de configuratieflow van de integratie worden afgerond.
 
 ```text
 text.ev_smart_charge_telegram_template_test
