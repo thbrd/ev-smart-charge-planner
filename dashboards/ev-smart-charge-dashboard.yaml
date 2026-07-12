@@ -47,6 +47,29 @@ views:
           - entity: sensor.ev_smart_charge_plan_net
             name: Netto
 
+      - type: entities
+        title: Testresultaat
+        show_header_toggle: false
+        entities:
+          - entity: sensor.ev_smart_charge_test_status
+            name: Status
+          - entity: sensor.ev_smart_charge_test_mode
+            name: Modus
+          - entity: sensor.ev_smart_charge_test_start
+            name: Start
+          - entity: sensor.ev_smart_charge_test_end
+            name: Verwacht klaar
+          - entity: sensor.ev_smart_charge_test_kwh
+            name: Benodigd kWh
+          - entity: sensor.ev_smart_charge_test_cost
+            name: Kosten
+          - entity: sensor.ev_smart_charge_test_ere
+            name: ERE
+          - entity: sensor.ev_smart_charge_test_net
+            name: Netto
+          - entity: sensor.ev_smart_charge_test_windows
+            name: Prijsblokken
+
       - type: grid
         columns: 2
         square: false
@@ -75,6 +98,18 @@ views:
               service: ev_smart_charge.simulate_plan
               service_data:
                 mode: flex
+          - type: button
+            name: Test flex
+            icon: mdi:flask-outline
+            tap_action:
+              action: call-service
+              service: ev_smart_charge.test_flex
+          - type: button
+            name: Test plan
+            icon: mdi:clipboard-check-outline
+            tap_action:
+              action: call-service
+              service: ev_smart_charge.test_plan
           - type: button
             name: Start nu
             icon: mdi:play

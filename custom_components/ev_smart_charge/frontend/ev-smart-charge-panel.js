@@ -62,12 +62,24 @@ class EvSmartChargePanel extends HTMLElement {
   }
 
   async _service(domain, service, data = {}) {
-    if (!this._hass) return;
+    if (!this._hass) return false;
     try {
       await this._hass.callService(domain, service, data);
       this._notice("Actie uitgevoerd");
+      window.setTimeout(() => this._render(), 250);
+      return true;
     } catch (error) {
       this._notice(`Actie mislukt: ${error.message || error}`);
+      return false;
+    }
+  }
+
+  async _test(label) {
+    const target = Number(this.shadowRoot.querySelector("#target-soc")?.value || 95);
+    const service = label === "test flex" ? "test_flex" : "test_plan";
+    const completed = await this._service("ev_smart_charge", service, { target_soc: target });
+    if (!completed) {
+      await this._service("ev_smart_charge", "simulate_plan", { mode: "flex", target_soc: target });
     }
   }
 
@@ -95,8 +107,8 @@ class EvSmartChargePanel extends HTMLElement {
         if (action === "plan-today") this._plan("today");
         if (action === "plan-flex") this._plan("flex");
         if (action === "plan-deadline") this._plan("deadline");
-        if (action === "test-flex") this._service("ev_smart_charge", "test_flex", { target_soc: Number(this.shadowRoot.querySelector("#target-soc")?.value || 95) });
-        if (action === "test-plan") this._service("ev_smart_charge", "test_plan", { target_soc: Number(this.shadowRoot.querySelector("#target-soc")?.value || 95) });
+        if (action === "test-flex") this._test("test flex");
+        if (action === "test-plan") this._test("test plan");
         if (action === "start") this._service("ev_smart_charge", "start");
         if (action === "stop") this._service("ev_smart_charge", "stop");
         if (action === "reset") this._service("ev_smart_charge", "reset");

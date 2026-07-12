@@ -28,7 +28,7 @@ De integratie gebruikt GitHub-tags en releases. HACS toont daardoor versies in p
 De huidige stabiele versie is:
 
 ```text
-v0.4.0
+v0.4.1
 ```
 
 Na een nieuwe release:
@@ -113,6 +113,8 @@ Test eerst zonder de auto daadwerkelijk te laden:
 Test vervolgens de veiligheidscontrole met de auto niet aangesloten. De actie `ev_smart_charge.start` moet dan worden geblokkeerd en de laadpaalswitch mag niet aan gaan.
 
 Pas daarna test je met een aangesloten auto. Gebruik eerst een toekomstig plan en controleer of de Peblar pas op het geplande moment wordt ingeschakeld. De berichten mogen nooit de lokale veiligheidscontrole omzeilen.
+
+`Test flex` en `Test plan` gebruiken dezelfde lokale planner als het echte flexibele plan. Ze schrijven alleen een simulatie-resultaat naar de testentiteiten; ze zetten de laadpaal niet aan, maken geen sessie aan en sturen geen Telegrambericht. Daardoor werken ze ook wanneer AI op `local`/uit staat.
 
 Lokale ontwikkeltests kunnen worden uitgevoerd met:
 
@@ -240,7 +242,7 @@ ev_smart_charge.start
 ev_smart_charge.stop
 ev_smart_charge.reset
 ev_smart_charge.status
-ev_smart_charge.simulate
+ev_smart_charge.simulate_plan
 ev_smart_charge.test_flex
 ev_smart_charge.test_plan
 ev_smart_charge.telegram_test
