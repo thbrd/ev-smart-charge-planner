@@ -4,7 +4,7 @@ Een universele slimme laadplanner voor elektrische auto's en laadpalen.
 
 Het project berekent wanneer een auto het beste kan laden op basis van dynamische energieprijzen, laadvermogen, benodigde energie, zonneforecast en een optionele deadline. De laadpaal wordt uitsluitend aangestuurd door lokale veiligheidscontroles.
 
-> Status: eerste HACS-MVP in ontwikkeling. De persoonlijke Node-RED-flow wordt niet gepubliceerd.
+> Status: HACS-MVP. De persoonlijke Node-RED-flow wordt niet gepubliceerd.
 
 ## HACS-installatie
 
@@ -28,7 +28,7 @@ Open na installatie de opties van de integratie en vul in:
 
 - `Telegramberichten inschakelen`: aan;
 - `Telegram-service`: meestal `telegram_bot.send_message`;
-- `Telegram chat-ID`: bijvoorbeeld `-5222938603`.
+- `Telegram chat-ID`: vul hier je eigen chat-ID in.
 
 De integratie maakt daarna tekstentiteiten aan waarmee de templates vanuit het dashboard kunnen worden aangepast:
 
@@ -65,7 +65,39 @@ De automatische meldingen zijn:
 
 Zet Telegram uit tijdens het testen met de schakelaar als je geen automatische meldingen wilt ontvangen.
 
-## HACS-MVP
+## Dashboard toevoegen
+
+Het voorbeeld-dashboard staat in [`dashboards/ev-smart-charge-dashboard.yaml`](dashboards/ev-smart-charge-dashboard.yaml).
+
+1. Ga naar `Instellingen → Dashboards`.
+2. Maak een nieuw dashboard aan of open de YAML-configuratie van een bestaand dashboard.
+3. Kopieer de inhoud van het YAML-bestand naar de dashboardconfiguratie.
+4. Controleer na opslaan of de entiteiten van de integratie dezelfde object-ID's hebben.
+
+Het dashboard bevat laadplanning, sessiegegevens, dag-, maand- en jaaroverzichten, Telegraminstellingen en afzonderlijke Telegram-testknoppen.
+
+## Testprocedure
+
+Test eerst zonder de auto daadwerkelijk te laden:
+
+1. Zet AI uit.
+2. Maak via het dashboard een flexibel plan.
+3. Controleer starttijd, eindtijd, benodigde kWh, kosten, ERE en netto.
+4. Klik op `Telegram test`.
+5. Test daarna elk afzonderlijk berichttype.
+
+Test vervolgens de veiligheidscontrole met de auto niet aangesloten. De actie `ev_smart_charge.start` moet dan worden geblokkeerd en de laadpaalswitch mag niet aan gaan.
+
+Pas daarna test je met een aangesloten auto. Gebruik eerst een toekomstig plan en controleer of de Peblar pas op het geplande moment wordt ingeschakeld. De berichten mogen nooit de lokale veiligheidscontrole omzeilen.
+
+Lokale ontwikkeltests kunnen worden uitgevoerd met:
+
+```bash
+python3 tests/test_planner.py
+python3 -m compileall -q custom_components tests
+```
+
+## Wat is inbegrepen
 
 De eerste integratie staat onder `custom_components/ev_smart_charge/` en bevat:
 
@@ -79,25 +111,17 @@ De eerste integratie staat onder `custom_components/ev_smart_charge/` en bevat:
 - Home Assistant-services voor plannen, simuleren, starten, stoppen en resetten;
 - instelbare laadparameters als integratie-entiteiten in plaats van handmatige helpers.
 
-De MVP is nog niet klaar voor een productie-installatie. De exacte per-prijsblok kostenadministratie, uitgebreide herstelpaden en een kant-en-klaar Lovelace-dashboard worden in volgende stappen toegevoegd.
-
-### Installeren tijdens ontwikkeling
-
-1. Kopieer of clone deze repository.
-2. Plaats de map `custom_components/ev_smart_charge` in `/config/custom_components/`.
-3. Herstart Home Assistant.
-4. Ga naar `Instellingen → Apparaten & diensten → Integratie toevoegen`.
-5. Zoek naar `EV Smart Charge Planner`.
-
 De Node-RED-export uit de persoonlijke installatie hoort niet bij deze installatie-instructie.
 
 ### Bekende MVP-beperkingen
 
 - De tariefparser ondersteunt gangbare forecast-attributen; de exacte Zonneplan-attribuutstructuur moet nog met een echte Home Assistant-export worden gevalideerd.
 - Sessieprijzen worden in deze eerste versie proportioneel uit het gekozen plan berekend. Exacte energie-toewijzing per werkelijk prijsblok volgt in een volgende versie.
-- Telegram-notificaties gebruiken de bestaande Home Assistant Telegram-service. De service, chat-ID en berichttemplates zijn instelbaar.
+- Telegramnotificaties gebruiken de bestaande Home Assistant Telegram-service. De service, chat-ID en berichttemplates zijn instelbaar.
+- Het dashboard gebruikt alleen standaard Home Assistant-kaarten.
 - De actuele FordPass/Peblar target-select wordt nog niet automatisch gewijzigd door de MVP.
-- De integratie is lokaal gecompileerd en met pure planner-scenario's getest. Een volledige Home Assistant-testomgeving is nog nodig voor de eerste alpha-release.
+- De simulatieservice schakelt niets; het zichtbare planresultaat wordt momenteel getest via `create_plan` of de lokale planner-tests.
+- Exacte kosten per werkelijk prijsblok en uitgebreide herstelpaden zijn nog een volgende ontwikkelstap.
 
 ## Doel
 
@@ -179,11 +203,9 @@ Optioneel:
 - Entity-ID's, laadvermogen, accucapaciteit, efficiëntie en ERE-vergoeding worden configureerbaar.
 - Boilerlogica hoort niet bij de universele planner. Dat is alleen een optionele persoonlijke uitbreiding.
 
-## Geplande Home Assistant-integratie
+## Home Assistant-services
 
-De uiteindelijke integratie wordt beschikbaar gemaakt via HACS en moet zonder Node-RED kunnen werken.
-
-Geplande services:
+Beschikbare services:
 
 ```text
 ev_smart_charge.create_plan
@@ -192,22 +214,24 @@ ev_smart_charge.stop
 ev_smart_charge.reset
 ev_smart_charge.status
 ev_smart_charge.simulate
+ev_smart_charge.telegram_test
+ev_smart_charge.telegram_send
 ```
 
-Geplande informatie-entiteiten:
+Beschikbare informatie-entiteiten:
 
 ```text
-sensor.ev_plan_status
-sensor.ev_plan_start
-sensor.ev_plan_end
-sensor.ev_plan_cost
-sensor.ev_plan_ere
-sensor.ev_plan_net_cost
-sensor.ev_session_energy
-sensor.ev_session_cost
-sensor.ev_month_energy
-sensor.ev_month_cost
-sensor.ev_month_savings
+sensor.ev_smart_charge_status
+sensor.ev_smart_charge_plan_start
+sensor.ev_smart_charge_plan_end
+sensor.ev_smart_charge_plan_cost
+sensor.ev_smart_charge_plan_ere
+sensor.ev_smart_charge_plan_net
+sensor.ev_smart_charge_session_kwh
+sensor.ev_smart_charge_session_cost
+sensor.ev_smart_charge_today_kwh
+sensor.ev_smart_charge_month_kwh
+sensor.ev_smart_charge_year_kwh
 ```
 
 De gebruiker stelt de integratie in via een configuratie-flow en selecteert zelf de beschikbare Home Assistant-entiteiten. Daardoor kunnen verschillende automerken en laadpalen worden gebruikt zolang de benodigde waarden beschikbaar zijn.
@@ -235,12 +259,15 @@ De Node-RED-versie en de HACS-integratie moeten dezelfde onderdelen delen:
 - [ ] Validator- en safety-contract vastleggen
 - [ ] Persistent sessie- en kostenmodel ontwerpen
 - [ ] Vereenvoudigde Node-RED-compatibiliteitslaag maken
-- [ ] Home Assistant custom integration bouwen
-- [ ] Config flow voor auto-, laadpaal- en tariefsensoren toevoegen
-- [ ] HACS-publicatie voorbereiden
-- [ ] Optionele dashboardkaart maken
+- [x] Home Assistant custom integration bouwen
+- [x] Config flow voor auto-, laadpaal- en tariefsensoren toevoegen
+- [x] HACS-publicatie voorbereiden
+- [x] Standaard Lovelace-dashboard maken
+- [x] Telegram-configuratie en testberichten toevoegen
+- [ ] Exacte kosten per werkelijk prijsblok toevoegen
+- [ ] Uitgebreide Home Assistant integration tests toevoegen
 
-Een eerste standaard Lovelace-dashboard staat in `dashboards/ev-smart-charge-dashboard.yaml`. Dit bestand kan via de YAML-editor van Home Assistant worden gekopieerd. Het gebruikt alleen standaard Home Assistant-kaarten; een aparte custom dashboardkaart komt pas later.
+Het standaard Lovelace-dashboard staat in `dashboards/ev-smart-charge-dashboard.yaml`. Het gebruikt alleen standaard Home Assistant-kaarten.
 
 ## Bijdragen
 
