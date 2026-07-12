@@ -59,6 +59,7 @@ SENSOR_DEFINITIONS = [
     ("year_sessions", "Jaar sessies", None),
     ("test_status", "Testplan status", None),
     ("test_mode", "Testplan modus", None),
+    ("test_reason", "Testplan toelichting", None),
     ("test_start", "Testplan start", None),
     ("test_end", "Testplan einde", None),
     ("test_kwh", "Testplan kWh", "kWh"),
@@ -139,6 +140,8 @@ class EVSensor(CoordinatorEntity[EVSmartChargeCoordinator], SensorEntity):
             return simulation.get("status", "idle")
         if self.key == "test_mode":
             return simulation.get("test_label", "—")
+        if self.key == "test_reason":
+            return simulation.get("reason", "—")
         if self.key == "test_start":
             return simulation_selected.get("start_at")
         if self.key == "test_end":

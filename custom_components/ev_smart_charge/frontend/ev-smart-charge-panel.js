@@ -63,7 +63,7 @@ class EvSmartChargePanel extends HTMLElement {
   _testWindows() {
     const windows = this._attributes("sensor.ev_smart_charge_test_windows").windows || [];
     if (!windows.length) return "<p class=\"muted\">Nog geen testresultaat. Kies Test flex of Test plan.</p>";
-    return windows.map((window) => `<div class="window"><span>${this._time(window.start_at)}–${this._time(window.end_at)}</span><strong>${this._escape(window.kwh)} kWh</strong><span>€${this._escape(window.price_eur_per_kwh)}/kWh</span><span>€${this._escape(window.cost_eur)}</span></div>`).join("");
+    return windows.map((window) => `<div class="window"><span>${this._time(window.start_at)}–${this._time(window.end_at)}</span><strong>${this._formatNumber(window.kwh, 2)} kWh</strong><span>€${this._formatNumber(window.price_eur_per_kwh, 3)}/kWh</span><span>€${this._formatNumber(window.cost_eur, 2)}</span></div>`).join("");
   }
 
   _forecastRows() {
@@ -72,13 +72,20 @@ class EvSmartChargePanel extends HTMLElement {
     return slots.slice(0, 24).map((slot) => {
       const start = slot.start_at || slot.start || slot.datetime || slot.timestamp;
       const price = slot.eur_per_kwh ?? slot.price_eur_per_kwh ?? slot.price ?? slot.value ?? slot.tariff;
-      return `<div class="forecast-row"><span>${this._time(start)}</span><strong>€${this._escape(price)}/kWh</strong></div>`;
+      return `<div class="forecast-row"><span>${this._time(start)}</span><strong>€${this._formatNumber(price, 3)}/kWh</strong></div>`;
     }).join("");
   }
 
   _number(entityId, digits = 2) {
     const value = Number(this._state(entityId, ""));
     return Number.isFinite(value) ? value.toFixed(digits) : "—";
+  }
+
+  _formatNumber(value, digits = 2) {
+    const number = Number(value);
+    return Number.isFinite(number)
+      ? number.toLocaleString("nl-NL", { minimumFractionDigits: digits, maximumFractionDigits: digits })
+      : String(value ?? "—");
   }
 
   _escape(value) {
@@ -181,8 +188,10 @@ class EvSmartChargePanel extends HTMLElement {
     return `<section class="card ${className}"><h2>${title}</h2>${body}</section>`;
   }
 
-  _metric(label, entityId, unit = "") {
-    return `<div class="metric"><span>${label}</span><strong>${this._escape(this._state(entityId))}${unit}</strong></div>`;
+  _metric(label, entityId, unit = "", digits = 2) {
+    const raw = this._state(entityId);
+    const value = raw === "—" ? raw : (Number.isFinite(Number(raw)) ? this._formatNumber(raw, digits) : raw);
+    return `<div class="metric"><span>${label}</span><strong>${this._escape(value)}${unit}</strong></div>`;
   }
 
   _template(entityId, label) {
@@ -213,7 +222,7 @@ class EvSmartChargePanel extends HTMLElement {
 
         ${this._card("Live status", `<div class="metrics">
           ${this._metric("Planstatus", "sensor.ev_smart_charge_status")}
-          ${this._metric("SoC", "sensor.ev_smart_charge_soc", "%")}
+          ${this._metric("SoC", "sensor.ev_smart_charge_soc", "%", 1)}
           ${this._metric("Laadvermogen", "sensor.ev_smart_charge_power_kw", " kW")}
           ${this._metric("Huidig tarief", "sensor.ev_smart_charge_current_tariff", " €/kWh")}
           ${this._metric("Auto aangesloten", "sensor.ev_smart_charge_plug_state")}
@@ -262,6 +271,7 @@ class EvSmartChargePanel extends HTMLElement {
           <div class="metrics test-summary">
             ${this._metric("Teststatus", "sensor.ev_smart_charge_test_status")}
             ${this._metric("Testmodus", "sensor.ev_smart_charge_test_mode")}
+            ${this._metric("Toelichting", "sensor.ev_smart_charge_test_reason")}
             ${this._metric("Start", "sensor.ev_smart_charge_test_start")}
             ${this._metric("Klaar", "sensor.ev_smart_charge_test_end")}
             ${this._metric("Benodigd", "sensor.ev_smart_charge_test_kwh", " kWh")}
@@ -294,45 +304,47 @@ class EvSmartChargePanel extends HTMLElement {
 
   _styles() {
     return `
-      :host { display:block; color:var(--primary-text-color); background:var(--primary-background-color); min-height:100vh; }
+      :host { --ev-accent:#ff9f1c; --ev-cyan:#35c2d8; --ev-green:#56c596; display:block; color:var(--primary-text-color); background:var(--primary-background-color); min-height:100vh; }
       * { box-sizing:border-box; }
-      main { max-width:1180px; margin:0 auto; padding:28px 24px 48px; }
-      .hero { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:22px; }
-      .eyebrow { color:var(--accent-color,#03a9f4); font-size:12px; font-weight:700; letter-spacing:1.4px; margin:0 0 7px; }
-      h1 { font-size:32px; line-height:1.1; margin:0; }
+      main { max-width:1180px; margin:0 auto; padding:32px 26px 52px; }
+      .hero { display:flex; justify-content:space-between; align-items:center; gap:22px; padding:24px 26px; margin-bottom:22px; background:var(--card-background-color); border:1px solid var(--divider-color); border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,.14); }
+      .eyebrow { color:var(--ev-accent); font-size:12px; font-weight:800; letter-spacing:1.8px; margin:0 0 8px; }
+      h1 { font-size:34px; line-height:1.1; margin:0; letter-spacing:.2px; }
       h2 { font-size:18px; margin:0 0 16px; }
-      h3 { font-size:16px; margin:0 0 12px; }
-      .muted { color:var(--secondary-text-color); margin:8px 0 0; }
-      .warning { background:var(--warning-color,#ff9800); color:var(--primary-text-color); border-radius:8px; padding:14px 16px; margin-bottom:18px; }
-      .card { background:var(--ha-card-background,var(--card-background-color)); border:1px solid var(--divider-color); border-radius:12px; padding:20px; margin-bottom:18px; box-shadow:var(--ha-card-box-shadow,none); }
+      h3 { font-size:15px; margin:0 0 12px; }
+      .muted { color:var(--secondary-text-color); margin:8px 0 0; line-height:1.45; }
+      .warning { background:rgba(255,159,28,.16); border:1px solid rgba(255,159,28,.55); color:var(--primary-text-color); border-radius:10px; padding:14px 16px; margin-bottom:18px; line-height:1.45; }
+      .card { background:var(--card-background-color); border:1px solid var(--divider-color); border-radius:14px; padding:22px; margin-bottom:18px; box-shadow:0 6px 18px rgba(0,0,0,.1); }
+      .card h2 { display:flex; align-items:center; gap:10px; }
       .columns { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; }
       .metrics { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
-      .metric { border-left:3px solid var(--accent-color,#03a9f4); padding:5px 10px; min-width:0; }
-      .metric span { display:block; color:var(--secondary-text-color); font-size:13px; margin-bottom:5px; }
-      .metric strong { display:block; font-size:19px; overflow-wrap:anywhere; }
-      .periods { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:22px; }
-      .periods > div { border-top:3px solid var(--accent-color,#03a9f4); padding-top:12px; }
-      .periods .metric { border-left:0; padding-left:0; margin-bottom:9px; }
+      .metric { background:var(--secondary-background-color); border-left:3px solid var(--ev-cyan); border-radius:8px; padding:11px 13px; min-width:0; }
+      .metric span { display:block; color:var(--secondary-text-color); font-size:12px; margin-bottom:6px; }
+      .metric strong { display:block; font-size:18px; line-height:1.25; overflow-wrap:anywhere; }
+      .periods { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; }
+      .periods > div { border-top:3px solid var(--ev-accent); background:var(--secondary-background-color); border-radius:9px; padding:14px; }
+      .periods .metric { background:transparent; border-left:0; padding:4px 0; margin-bottom:4px; }
       .form-row,.button-row,.settings-grid { display:flex; flex-wrap:wrap; gap:10px; margin-top:16px; }
       label { display:flex; flex-direction:column; gap:6px; color:var(--secondary-text-color); font-size:13px; flex:1 1 160px; }
-      input,textarea { color:var(--primary-text-color); background:var(--input-fill-color,transparent); border:1px solid var(--divider-color); border-radius:7px; font:inherit; padding:9px 10px; }
+      input,textarea { color:var(--primary-text-color); background:var(--input-fill-color,transparent); border:1px solid var(--divider-color); border-radius:8px; font:inherit; padding:10px 11px; }
       textarea { min-height:76px; resize:vertical; width:100%; }
-      button { color:var(--primary-text-color); background:var(--secondary-background-color); border:1px solid var(--divider-color); border-radius:8px; padding:10px 13px; cursor:pointer; font:inherit; }
-      button:hover { filter:brightness(1.12); }
-      button.primary { background:var(--primary-color,#03a9f4); color:var(--text-primary-color,#fff); border-color:transparent; }
+      button { color:var(--primary-text-color); background:var(--secondary-background-color); border:1px solid var(--divider-color); border-radius:9px; padding:10px 14px; cursor:pointer; font:inherit; transition:transform .15s ease,filter .15s ease,border-color .15s ease; }
+      button:hover { filter:brightness(1.14); transform:translateY(-1px); border-color:var(--ev-cyan); }
+      button.primary { background:var(--ev-accent); color:#161616; border-color:transparent; font-weight:700; }
       .secondary { white-space:nowrap; }
       .templates { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; margin-top:18px; }
       .windows { margin-top:18px; border-top:1px solid var(--divider-color); padding-top:14px; }
-      .window { display:grid; grid-template-columns:1.2fr .9fr 1fr .7fr; gap:10px; padding:9px 0; border-bottom:1px solid var(--divider-color); font-size:14px; }
+      .window { display:grid; grid-template-columns:1.2fr .9fr 1fr .7fr; gap:10px; padding:10px 0; border-bottom:1px solid var(--divider-color); font-size:14px; }
       .window strong { text-align:right; }
       .window span:last-child { text-align:right; }
-      .forecast { margin-top:18px; border-top:1px solid var(--divider-color); padding-top:14px; max-height:280px; overflow:auto; }
-      .forecast-row { display:flex; justify-content:space-between; gap:16px; padding:7px 0; border-bottom:1px solid var(--divider-color); font-size:14px; }
+      .forecast { margin-top:18px; border-top:1px solid var(--divider-color); padding-top:14px; max-height:300px; overflow:auto; }
+      .forecast-row { display:flex; justify-content:space-between; gap:16px; padding:8px 10px; border-bottom:1px solid var(--divider-color); font-size:14px; }
+      .forecast-row:nth-child(even) { background:var(--secondary-background-color); }
       .toggle { flex:0 0 auto; flex-direction:row; align-items:center; justify-content:flex-start; min-width:150px; padding-top:26px; }
       .toggle input { width:20px; height:20px; }
       .notice { min-height:0; opacity:0; color:var(--success-color,#43a047); margin:0 0 0; transition:opacity .2s; }
       .notice.visible { min-height:22px; opacity:1; margin-bottom:10px; }
-      @media (max-width:800px) { main { padding:18px 14px 32px; } .columns,.periods,.templates { grid-template-columns:1fr; } .hero { flex-direction:column; } h1 { font-size:28px; } .window { grid-template-columns:1fr 1fr; } .window strong,.window span:last-child { text-align:left; } }
+      @media (max-width:800px) { main { padding:18px 14px 32px; } .columns,.periods,.templates { grid-template-columns:1fr; } .hero { align-items:flex-start; flex-direction:column; } h1 { font-size:28px; } .window { grid-template-columns:1fr 1fr; } .window strong,.window span:last-child { text-align:left; } }
     `;
   }
 }

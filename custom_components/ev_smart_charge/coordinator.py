@@ -38,7 +38,7 @@ from .const import (
     TELEGRAM_TEMPLATE_KEYS,
 )
 from .history import SessionHistory
-from .planner import make_plan, number
+from .planner import make_plan, normalize_slots, number
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -89,7 +89,18 @@ class EVSmartChargeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         config = self.options
         tariff_entity = config.get(CONF_TARIFF_ENTITY)
         tariff_attrs = attributes(self.hass, tariff_entity)
-        tariff_slots = tariff_attrs.get("forecast", tariff_attrs.get("prices", tariff_attrs.get("hourly", tariff_attrs.get("tariffs", []))))
+        raw_tariff_slots = tariff_attrs.get(
+            "forecast",
+            tariff_attrs.get("prices", tariff_attrs.get("hourly", tariff_attrs.get("tariffs", []))),
+        )
+        tariff_slots = [
+            {
+                "start_at": slot["start"].isoformat(),
+                "end_at": slot["end"].isoformat(),
+                "eur_per_kwh": round(slot["price"], 7),
+            }
+            for slot in normalize_slots(raw_tariff_slots)
+        ]
         return {
             "ev": {
                 "soc_percent": number(state_value(self.hass, config.get(CONF_SOC_ENTITY))),

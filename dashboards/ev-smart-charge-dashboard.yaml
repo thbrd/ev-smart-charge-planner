@@ -55,6 +55,8 @@ views:
             name: Status
           - entity: sensor.ev_smart_charge_test_mode
             name: Modus
+          - entity: sensor.ev_smart_charge_test_reason
+            name: Toelichting
           - entity: sensor.ev_smart_charge_test_start
             name: Start
           - entity: sensor.ev_smart_charge_test_end

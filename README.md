@@ -28,7 +28,7 @@ De integratie gebruikt GitHub-tags en releases. HACS toont daardoor versies in p
 De huidige stabiele versie is:
 
 ```text
-v0.4.2
+v0.4.3
 ```
 
 Na een nieuwe release:
@@ -141,6 +141,8 @@ De eerste integratie staat onder `custom_components/ev_smart_charge/` en bevat:
 - een eigen sidebar-panel voor bediening, instellingen en Telegramtests;
 - zichtbare testplannen voor `Test flex` en `Test plan`, zonder laadpaalactivering;
 - uitlezing van tariefforecast, zonneforecast, huidig zonnevermogen, auto-status en laadpaalstatus.
+- Zonneplan-forecast parsing voor `start_date`, geneste prijsvelden en uur- of kwartierblokken.
+- Een verduidelijkte testtoelichting wanneer geen geldig laadvenster beschikbaar is.
 
 De Node-RED-export uit de persoonlijke installatie hoort niet bij deze installatie-instructie.
 

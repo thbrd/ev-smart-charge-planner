@@ -7,6 +7,7 @@ _spec = importlib.util.spec_from_file_location("planner", Path(__file__).parents
 planner = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(planner)
 make_plan = planner.make_plan
+normalize_slots = planner.normalize_slots
 
 
 def snapshot():
@@ -35,7 +36,22 @@ def test_finished_when_target_reached():
     assert make_plan(data)["status"] == "finished"
 
 
+def test_zonneplan_forecast_attributes_are_normalized():
+    start = datetime(2026, 7, 13, 10, tzinfo=timezone.utc)
+    slots = normalize_slots([
+        {
+            "start_date": start.isoformat(),
+            "end_date": (start + timedelta(minutes=15)).isoformat(),
+            "price_tax_included": {"amount": 3062133},
+        }
+    ])
+    assert len(slots) == 1
+    assert slots[0]["end"] - slots[0]["start"] == timedelta(minutes=15)
+    assert slots[0]["price"] == 0.3062133
+
+
 if __name__ == "__main__":
     test_local_planner_selects_cheapest_valid_window()
     test_finished_when_target_reached()
+    test_zonneplan_forecast_attributes_are_normalized()
     print("planner tests: PASS")

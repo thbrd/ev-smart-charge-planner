@@ -32,6 +32,30 @@ def parse_datetime(value: Any) -> datetime | None:
         return None
 
 
+def _nested_value(value: Any) -> Any:
+    if isinstance(value, dict):
+        if "amount" in value:
+            return value["amount"]
+        for key in ("value", "price", "tariff"):
+            if key in value:
+                return value[key]
+    return value
+
+
+def _price_eur_per_kwh(value: Any) -> float | None:
+    value = _nested_value(value)
+    price = number(value)
+    if price is None:
+        return None
+    # Zonneplan exposes amount values in 1e-7 EUR/kWh. Also accept cents/kWh
+    # and normal EUR/kWh so the local planner remains provider-agnostic.
+    if abs(price) >= 1000:
+        return price / 10_000_000
+    if abs(price) > 5:
+        return price / 100
+    return price
+
+
 def normalize_slots(raw: Any) -> list[dict[str, Any]]:
     if isinstance(raw, dict):
         for key in ("forecast", "prices", "hourly", "tariffs", "slots"):
@@ -46,17 +70,28 @@ def normalize_slots(raw: Any) -> list[dict[str, Any]]:
         if not isinstance(item, dict):
             continue
         start = parse_datetime(
-            item.get("start_at", item.get("start", item.get("datetime", item.get("timestamp"))))
-        )
-        price = number(
             item.get(
-                "eur_per_kwh",
-                item.get("price_eur_per_kwh", item.get("price", item.get("value", item.get("tariff")))),
+                "start_at",
+                item.get(
+                    "start_date",
+                    item.get("start", item.get("datetime", item.get("timestamp"))),
+                ),
             )
         )
+        price_raw = item.get(
+            "eur_per_kwh",
+            item.get(
+                "price_eur_per_kwh",
+                item.get(
+                    "price_tax_included",
+                    item.get("price", item.get("value", item.get("tariff"))),
+                ),
+            ),
+        )
+        price = _price_eur_per_kwh(price_raw)
         if start is None or price is None:
             continue
-        end = parse_datetime(item.get("end_at", item.get("end")))
+        end = parse_datetime(item.get("end_at", item.get("end_date", item.get("end"))))
         result.append({"start": start, "end": end, "price": price})
 
     result.sort(key=lambda slot: slot["start"])

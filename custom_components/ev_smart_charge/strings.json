@@ -12,23 +12,23 @@
         "title": "Auto en laadpaal",
         "description": "Kies de Home Assistant-entiteiten. FordPass en Peblar zijn niet verplicht.",
         "data": {
-          "soc_entity": "Auto SoC",
-          "plug_entity": "Auto aangesloten",
-          "charging_entity": "Auto laadstatus",
-          "target_entity": "Auto doelpercentage",
-          "charger_state_entity": "Laadpaalstatus",
-          "charger_switch_entity": "Laadpaal aan/uit",
-          "power_entity": "Laadvermogen",
-          "session_energy_entity": "Sessie-energie"
+          "soc_entity": "Auto SoC — accupercentage",
+          "plug_entity": "Auto aangesloten — connected/disconnected",
+          "charging_entity": "Auto laadstatus — charging/not charging",
+          "target_entity": "Auto doelpercentage — select (optioneel)",
+          "charger_state_entity": "Peblar laadpaalstatus — charging/suspended/no EV",
+          "charger_switch_entity": "Peblar laadschakelaar — on/off",
+          "power_entity": "Peblar laadvermogen — W",
+          "session_energy_entity": "Peblar sessie-energie — kWh"
         }
       },
       "energy": {
         "title": "Energiebronnen",
         "description": "Kies de tariefsensor en optioneel zonne-informatie.",
         "data": {
-          "tariff_entity": "Tarief en forecast",
-          "solar_forecast_entity": "Zonneforecast",
-          "solar_now_entity": "Zonnevermogen nu"
+          "tariff_entity": "Zonneplan actuele prijs + forecast",
+          "solar_forecast_entity": "Forecast.Solar opbrengstvoorspelling — kWh (optioneel)",
+          "solar_now_entity": "Actueel zonnevermogen — W (optioneel)"
         }
       },
       "options": {
