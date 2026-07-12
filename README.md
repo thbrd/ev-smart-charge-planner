@@ -28,7 +28,7 @@ De integratie gebruikt GitHub-tags en releases. HACS toont daardoor versies in p
 De huidige stabiele versie is:
 
 ```text
-v0.3.0
+v0.4.0
 ```
 
 Na een nieuwe release:
@@ -103,10 +103,12 @@ Test eerst zonder de auto daadwerkelijk te laden:
 
 1. Zet AI uit.
 2. Open het sidebar-panel `EV Smart Charge`.
-3. Maak via het panel een flexibel plan.
-4. Controleer starttijd, eindtijd, benodigde kWh, kosten, ERE en netto.
-5. Klik op `Telegram test`.
-6. Test daarna elk afzonderlijk berichttype.
+3. Klik op `🧪 Test flex`.
+4. Klik op `🧪 Test plan`.
+5. Controleer de actuele tariefforecast, gekozen prijsblokken, starttijd, eindtijd, kWh, kosten, ERE en netto.
+6. Controleer de zonneforecast, het actuele zonnevermogen en de laadpaalstatus.
+7. Klik op `Telegram test`.
+8. Test daarna elk afzonderlijk berichttype.
 
 Test vervolgens de veiligheidscontrole met de auto niet aangesloten. De actie `ev_smart_charge.start` moet dan worden geblokkeerd en de laadpaalswitch mag niet aan gaan.
 
@@ -132,7 +134,9 @@ De eerste integratie staat onder `custom_components/ev_smart_charge/` en bevat:
 - dag-, maand- en jaaraggregaten;
 - Home Assistant-services voor plannen, simuleren, starten, stoppen en resetten;
 - instelbare laadparameters als integratie-entiteiten in plaats van handmatige helpers;
-- een eigen sidebar-panel voor bediening, instellingen en Telegramtests.
+- een eigen sidebar-panel voor bediening, instellingen en Telegramtests;
+- zichtbare testplannen voor `Test flex` en `Test plan`, zonder laadpaalactivering;
+- uitlezing van tariefforecast, zonneforecast, huidig zonnevermogen, auto-status en laadpaalstatus.
 
 De Node-RED-export uit de persoonlijke installatie hoort niet bij deze installatie-instructie.
 
@@ -143,7 +147,7 @@ De Node-RED-export uit de persoonlijke installatie hoort niet bij deze installat
 - Telegramnotificaties gebruiken de bestaande Home Assistant Telegram-service. De service, chat-ID en berichttemplates zijn instelbaar.
 - Het dashboard gebruikt alleen standaard Home Assistant-kaarten.
 - De actuele FordPass/Peblar target-select wordt nog niet automatisch gewijzigd door de MVP.
-- De simulatieservice schakelt niets; het zichtbare planresultaat wordt momenteel getest via `create_plan` of de lokale planner-tests.
+- De simulatie- en testservices schakelen niets en slaan geen plan op.
 - Exacte kosten per werkelijk prijsblok en uitgebreide herstelpaden zijn nog een volgende ontwikkelstap.
 
 ## Doel
@@ -237,6 +241,8 @@ ev_smart_charge.stop
 ev_smart_charge.reset
 ev_smart_charge.status
 ev_smart_charge.simulate
+ev_smart_charge.test_flex
+ev_smart_charge.test_plan
 ev_smart_charge.telegram_test
 ev_smart_charge.telegram_send
 ```
@@ -255,6 +261,11 @@ sensor.ev_smart_charge_session_cost
 sensor.ev_smart_charge_today_kwh
 sensor.ev_smart_charge_month_kwh
 sensor.ev_smart_charge_year_kwh
+sensor.ev_smart_charge_tariff_slots
+sensor.ev_smart_charge_solar_forecast_kwh
+sensor.ev_smart_charge_solar_now_w
+sensor.ev_smart_charge_test_status
+sensor.ev_smart_charge_test_windows
 ```
 
 De gebruiker stelt de integratie in via een configuratie-flow en selecteert zelf de beschikbare Home Assistant-entiteiten. Daardoor kunnen verschillende automerken en laadpalen worden gebruikt zolang de benodigde waarden beschikbaar zijn.
@@ -288,6 +299,8 @@ De Node-RED-versie en de HACS-integratie moeten dezelfde onderdelen delen:
 - [x] Standaard Lovelace-dashboard maken
 - [x] Telegram-configuratie en testberichten toevoegen
 - [x] Sidebar-panel voor dagelijkse bediening maken
+- [x] Test flex en test plan vanuit het sidebar-panel toevoegen
+- [x] Tarief- en zonneforecast zichtbaar maken
 - [ ] Exacte kosten per werkelijk prijsblok toevoegen
 - [ ] Uitgebreide Home Assistant integration tests toevoegen
 

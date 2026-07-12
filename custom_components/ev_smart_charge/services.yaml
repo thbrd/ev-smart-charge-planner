@@ -54,6 +54,34 @@ simulate_plan:
           step: 5
           mode: box
 
+test_flex:
+  name: Test flexibel laadplan
+  description: Bereken en toon een flexibel testplan zonder iets te schakelen.
+  fields:
+    target_soc:
+      name: Testdoelpercentage
+      required: false
+      selector:
+        number:
+          min: 50
+          max: 100
+          step: 5
+          mode: box
+
+test_plan:
+  name: Test laadplan
+  description: Bereken en toon een testplan met de actuele tarieven zonder iets te schakelen.
+  fields:
+    target_soc:
+      name: Testdoelpercentage
+      required: false
+      selector:
+        number:
+          min: 50
+          max: 100
+          step: 5
+          mode: box
+
 start:
   name: Start charging
   description: Start laden na een lokale veiligheidscontrole.

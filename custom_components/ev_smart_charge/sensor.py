@@ -21,8 +21,17 @@ SENSOR_DEFINITIONS = [
     ("status", "Status", None),
     ("soc", "SoC", "%"),
     ("target_soc", "Doel SoC", "%"),
+    ("plug_state", "Auto aangesloten", None),
+    ("charging_state", "Auto laadstatus", None),
+    ("target_state", "Auto doelstatus", None),
+    ("charger_state", "Laadpaalstatus", None),
+    ("charger_switch_state", "Laadpaal switch", None),
     ("power_kw", "Laadvermogen", "kW"),
+    ("session_energy_source_kwh", "Peblar sessie-energie", "kWh"),
     ("current_tariff", "Huidig tarief", "EUR/kWh"),
+    ("tariff_slots", "Tariefblokken", None),
+    ("solar_forecast_kwh", "Zonneforecast", "kWh"),
+    ("solar_now_w", "Zonnevermogen nu", "W"),
     ("plan_start", "Plan start", None),
     ("plan_end", "Plan einde", None),
     ("plan_kwh", "Plan kWh", "kWh"),
@@ -48,6 +57,15 @@ SENSOR_DEFINITIONS = [
     ("year_ere", "Jaar ERE", "EUR"),
     ("year_net", "Jaar netto", "EUR"),
     ("year_sessions", "Jaar sessies", None),
+    ("test_status", "Testplan status", None),
+    ("test_mode", "Testplan modus", None),
+    ("test_start", "Testplan start", None),
+    ("test_end", "Testplan einde", None),
+    ("test_kwh", "Testplan kWh", "kWh"),
+    ("test_cost", "Testplan kosten", "EUR"),
+    ("test_ere", "Testplan ERE", "EUR"),
+    ("test_net", "Testplan netto", "EUR"),
+    ("test_windows", "Testprijsblokken", None),
 ]
 
 
@@ -76,6 +94,8 @@ class EVSensor(CoordinatorEntity[EVSmartChargeCoordinator], SensorEntity):
         ev = snapshot.get("ev", {})
         charger = snapshot.get("charger", {})
         plan = (data.get("plan") or {}).get("selected") or {}
+        simulation = data.get("simulation") or {}
+        simulation_selected = simulation.get("selected") or {}
         aggregates = data.get("aggregates", {})
         if self.key == "status":
             return (data.get("plan") or {}).get("status", "idle")
@@ -83,8 +103,26 @@ class EVSensor(CoordinatorEntity[EVSmartChargeCoordinator], SensorEntity):
             return ev.get("soc_percent")
         if self.key == "target_soc":
             return (data.get("plan") or {}).get("target_soc_percent", snapshot.get("settings", {}).get("target_soc_percent"))
+        if self.key == "plug_state":
+            return ev.get("plug_state")
+        if self.key == "charging_state":
+            return ev.get("charging_state")
+        if self.key == "target_state":
+            return ev.get("target_state")
+        if self.key == "charger_state":
+            return charger.get("state")
+        if self.key == "charger_switch_state":
+            return charger.get("switch_state")
         if self.key == "power_kw":
             return round((charger.get("power_w") or 0) / 1000, 3)
+        if self.key == "session_energy_source_kwh":
+            return charger.get("session_energy_kwh")
+        if self.key == "tariff_slots":
+            return len(snapshot.get("tariff_slots") or [])
+        if self.key == "solar_forecast_kwh":
+            return snapshot.get("solar_forecast_kwh")
+        if self.key == "solar_now_w":
+            return snapshot.get("solar_now_w")
         if self.key == "plan_start":
             return plan.get("start_at")
         if self.key == "plan_end":
@@ -97,6 +135,24 @@ class EVSensor(CoordinatorEntity[EVSmartChargeCoordinator], SensorEntity):
             return plan.get("ere_eur")
         if self.key == "plan_net":
             return plan.get("net_eur")
+        if self.key == "test_status":
+            return simulation.get("status", "idle")
+        if self.key == "test_mode":
+            return simulation.get("test_label", "—")
+        if self.key == "test_start":
+            return simulation_selected.get("start_at")
+        if self.key == "test_end":
+            return simulation_selected.get("end_at")
+        if self.key == "test_kwh":
+            return simulation_selected.get("kwh")
+        if self.key == "test_cost":
+            return simulation_selected.get("cost_eur")
+        if self.key == "test_ere":
+            return simulation_selected.get("ere_eur")
+        if self.key == "test_net":
+            return simulation_selected.get("net_eur")
+        if self.key == "test_windows":
+            return len(simulation_selected.get("windows") or [])
         if self.key.startswith("session_"):
             return (data.get("session") or {}).get(self.key.removeprefix("session_"))
         for period in ("today", "month", "year"):
@@ -104,4 +160,23 @@ class EVSensor(CoordinatorEntity[EVSmartChargeCoordinator], SensorEntity):
                 return aggregates.get(period, {}).get(self.key.removeprefix(period + "_"))
         if self.key == "current_tariff":
             return snapshot.get("current_tariff")
+        return None
+
+    @property
+    def extra_state_attributes(self):
+        data = self.coordinator.data or {}
+        snapshot = data.get("snapshot", {})
+        simulation = data.get("simulation") or {}
+        selected = simulation.get("selected") or {}
+        if self.key == "tariff_slots":
+            return {"slots": snapshot.get("tariff_slots") or [], "count": len(snapshot.get("tariff_slots") or [])}
+        if self.key == "test_windows":
+            return {
+                "mode": simulation.get("test_label", "—"),
+                "reason": simulation.get("reason", "—"),
+                "windows": selected.get("windows") or [],
+                "candidates": simulation.get("candidates") or [],
+            }
+        if self.key == "test_status":
+            return {"reason": simulation.get("reason", "—"), "mode": simulation.get("test_label", "—")}
         return None

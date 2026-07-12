@@ -145,6 +145,26 @@ class EVSmartChargeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             await self.async_send_telegram("plan")
         return plan
 
+    async def async_simulate_plan(
+        self,
+        mode: str = "flex",
+        target_soc: float | None = None,
+        deadline: str | None = None,
+        label: str | None = None,
+    ) -> dict[str, Any]:
+        """Calculate a visible test result without saving or switching anything."""
+        snapshot = self.snapshot()
+        plan = make_plan(snapshot, mode, deadline, target_soc)
+        plan["test_label"] = label or mode
+        self.data = {
+            **(self.data or {}),
+            "simulation": plan,
+            "snapshot": snapshot,
+            "aggregates": self.history.aggregates(),
+        }
+        self.async_set_updated_data(self.data)
+        return plan
+
     class _TelegramValues(dict):
         def __missing__(self, key):
             return "—"

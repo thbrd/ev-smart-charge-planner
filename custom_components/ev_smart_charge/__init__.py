@@ -22,12 +22,15 @@ from .const import (
     SERVICE_STOP,
     SERVICE_TELEGRAM_SEND,
     SERVICE_TELEGRAM_TEST,
+    SERVICE_TEST_FLEX,
+    SERVICE_TEST_PLAN,
     TELEGRAM_EVENTS,
 )
 from .coordinator import EVSmartChargeCoordinator
 
 SERVICE_SCHEMA = vol.Schema({vol.Optional("mode", default="flex"): vol.In(["today", "flex", "deadline"]), vol.Optional("deadline"): str, vol.Optional("target_soc"): vol.Coerce(float)})
 TELEGRAM_SCHEMA = vol.Schema({vol.Optional("event", default="test"): vol.In(TELEGRAM_EVENTS), vol.Optional("message"): str})
+TEST_SCHEMA = vol.Schema({vol.Optional("target_soc"): vol.Coerce(float)})
 PANEL_URL = "/ev_smart_charge_panel"
 PANEL_PATH = "ev-smart-charge-panel"
 PANEL_FRONTEND_URL = "ev-smart-charge"
@@ -70,7 +73,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
         async def simulate_plan(call: ServiceCall) -> None:
             active = coordinator_for_call()
-            await active.async_create_plan(call.data["mode"], call.data.get("deadline"), call.data.get("target_soc"), dry_run=True)
+            await active.async_simulate_plan(
+                mode=call.data["mode"],
+                deadline=call.data.get("deadline"),
+                target_soc=call.data.get("target_soc"),
+                label=f"simulate {call.data['mode']}",
+            )
 
         async def start(call: ServiceCall) -> None:
             await coordinator_for_call().async_start()
@@ -91,6 +99,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         async def telegram_send(call: ServiceCall) -> None:
             await coordinator_for_call().async_send_telegram(call.data["event"], call.data.get("message"))
 
+        async def test_flex(call: ServiceCall) -> None:
+            await coordinator_for_call().async_simulate_plan(
+                mode="flex",
+                target_soc=call.data.get("target_soc"),
+                label="test flex",
+            )
+
+        async def test_plan(call: ServiceCall) -> None:
+            await coordinator_for_call().async_simulate_plan(
+                mode="flex",
+                target_soc=call.data.get("target_soc"),
+                label="test plan",
+            )
+
         hass.services.async_register(DOMAIN, SERVICE_CREATE_PLAN, create_plan, schema=SERVICE_SCHEMA)
         hass.services.async_register(DOMAIN, SERVICE_SIMULATE_PLAN, simulate_plan, schema=SERVICE_SCHEMA)
         hass.services.async_register(DOMAIN, SERVICE_START, start)
@@ -99,6 +121,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.services.async_register(DOMAIN, SERVICE_STATUS, status)
         hass.services.async_register(DOMAIN, SERVICE_TELEGRAM_TEST, telegram_test)
         hass.services.async_register(DOMAIN, SERVICE_TELEGRAM_SEND, telegram_send, schema=TELEGRAM_SCHEMA)
+        hass.services.async_register(DOMAIN, SERVICE_TEST_FLEX, test_flex, schema=TEST_SCHEMA)
+        hass.services.async_register(DOMAIN, SERVICE_TEST_PLAN, test_plan, schema=TEST_SCHEMA)
     return True
 
 

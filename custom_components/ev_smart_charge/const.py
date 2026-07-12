@@ -67,6 +67,8 @@ SERVICE_RESET = "reset"
 SERVICE_STATUS = "status"
 SERVICE_TELEGRAM_TEST = "telegram_test"
 SERVICE_TELEGRAM_SEND = "telegram_send"
+SERVICE_TEST_FLEX = "test_flex"
+SERVICE_TEST_PLAN = "test_plan"
 
 TELEGRAM_EVENTS = ["test", "plan", "start", "done", "stop", "blocked"]
 TELEGRAM_TEMPLATE_KEYS = {
