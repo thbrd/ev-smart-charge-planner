@@ -11,8 +11,10 @@ CONF_CHARGER_SWITCH_ENTITY = "charger_switch_entity"
 CONF_POWER_ENTITY = "power_entity"
 CONF_SESSION_ENERGY_ENTITY = "session_energy_entity"
 CONF_TARIFF_ENTITY = "tariff_entity"
+CONF_TARIFF_PROVIDER = "tariff_provider"
 CONF_SOLAR_FORECAST_ENTITY = "solar_forecast_entity"
 CONF_SOLAR_NOW_ENTITY = "solar_now_entity"
+CONF_CONTROL_MODE = "control_mode"
 
 CONF_BATTERY_CAPACITY = "battery_capacity_kwh"
 CONF_CHARGE_POWER = "charge_power_kw"
@@ -37,6 +39,8 @@ CONF_TELEGRAM_TEMPLATE_STOP = "telegram_template_stop"
 CONF_TELEGRAM_TEMPLATE_BLOCKED = "telegram_template_blocked"
 
 AI_MODES = ["local", "explain", "choose_candidate"]
+TARIFF_PROVIDERS = ["auto", "zonneplan", "tibber", "anwb", "generic"]
+CONTROL_MODES = ["monitor", "hacs"]
 DEFAULTS = {
     CONF_BATTERY_CAPACITY: 91.0,
     CONF_CHARGE_POWER: 11.0,
@@ -48,6 +52,8 @@ DEFAULTS = {
     CONF_AI_ENABLED: False,
     CONF_AI_MODE: "local",
     CONF_AI_MODEL: "gpt-5.4-mini",
+    CONF_TARIFF_PROVIDER: "auto",
+    CONF_CONTROL_MODE: "monitor",
     CONF_TELEGRAM_ENABLED: False,
     CONF_TELEGRAM_SERVICE: "telegram_bot.send_message",
     CONF_TELEGRAM_CHAT_ID: "",
@@ -69,6 +75,22 @@ SERVICE_TELEGRAM_TEST = "telegram_test"
 SERVICE_TELEGRAM_SEND = "telegram_send"
 SERVICE_TEST_FLEX = "test_flex"
 SERVICE_TEST_PLAN = "test_plan"
+SERVICE_UPDATE_SETUP = "update_setup"
+SERVICE_TEST_CONNECTION = "test_connection"
+
+SETUP_ENTITY_KEYS = (
+    CONF_SOC_ENTITY,
+    CONF_PLUG_ENTITY,
+    CONF_CHARGING_ENTITY,
+    CONF_TARGET_ENTITY,
+    CONF_CHARGER_STATE_ENTITY,
+    CONF_CHARGER_SWITCH_ENTITY,
+    CONF_POWER_ENTITY,
+    CONF_SESSION_ENERGY_ENTITY,
+    CONF_TARIFF_ENTITY,
+    CONF_SOLAR_FORECAST_ENTITY,
+    CONF_SOLAR_NOW_ENTITY,
+)
 
 TELEGRAM_EVENTS = ["test", "plan", "start", "done", "stop", "blocked"]
 TELEGRAM_TEMPLATE_KEYS = {

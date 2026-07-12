@@ -8,14 +8,17 @@ from homeassistant import config_entries
 from homeassistant.core import callback
 from homeassistant.helpers import selector
 
+from .discovery import discover_entities
 from .const import (
     AI_MODES,
+    CONTROL_MODES,
     CONF_AI_API_KEY,
     CONF_AI_ENABLED,
     CONF_AI_MODE,
     CONF_AI_MODEL,
     CONF_BATTERY_CAPACITY,
     CONF_CHARGE_POWER,
+    CONF_CONTROL_MODE,
     CONF_CHARGER_STATE_ENTITY,
     CONF_CHARGER_SWITCH_ENTITY,
     CONF_CHARGING_ENTITY,
@@ -29,6 +32,7 @@ from .const import (
     CONF_SOLAR_FORECAST_ENTITY,
     CONF_SOLAR_NOW_ENTITY,
     CONF_TARIFF_ENTITY,
+    CONF_TARIFF_PROVIDER,
     CONF_TARGET_ENTITY,
     CONF_TARGET_SOC,
     CONF_TELEGRAM_CHAT_ID,
@@ -36,6 +40,7 @@ from .const import (
     CONF_TELEGRAM_SERVICE,
     DEFAULTS,
     DOMAIN,
+    TARIFF_PROVIDERS,
 )
 
 
@@ -64,15 +69,23 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             self._data.update(user_input)
             return await self.async_step_energy()
+        suggestions = discover_entities(self.hass)
+
+        def field(key: str, domain: str | list[str], required: bool = False):
+            default = (suggestions.get(key) or [{}])[0].get("entity_id")
+            if required:
+                return vol.Required(key, default=default) if default else vol.Required(key)
+            return vol.Optional(key, default=default) if default else vol.Optional(key)
+
         schema = vol.Schema({
-            vol.Required(CONF_SOC_ENTITY): entity("sensor"),
-            vol.Required(CONF_PLUG_ENTITY): entity(["binary_sensor", "sensor"]),
-            vol.Optional(CONF_CHARGING_ENTITY): entity(["binary_sensor", "sensor"]),
-            vol.Optional(CONF_TARGET_ENTITY): entity("select"),
-            vol.Required(CONF_CHARGER_STATE_ENTITY): entity(["sensor", "binary_sensor"]),
-            vol.Required(CONF_CHARGER_SWITCH_ENTITY): entity("switch"),
-            vol.Optional(CONF_POWER_ENTITY): entity("sensor"),
-            vol.Optional(CONF_SESSION_ENERGY_ENTITY): entity("sensor"),
+            field(CONF_SOC_ENTITY, "sensor", True): entity("sensor"),
+            field(CONF_PLUG_ENTITY, ["binary_sensor", "sensor"], True): entity(["binary_sensor", "sensor"]),
+            field(CONF_CHARGING_ENTITY, ["binary_sensor", "sensor"]): entity(["binary_sensor", "sensor"]),
+            field(CONF_TARGET_ENTITY, "select"): entity("select"),
+            field(CONF_CHARGER_STATE_ENTITY, ["sensor", "binary_sensor"], True): entity(["sensor", "binary_sensor"]),
+            field(CONF_CHARGER_SWITCH_ENTITY, "switch", True): entity("switch"),
+            field(CONF_POWER_ENTITY, "sensor"): entity("sensor"),
+            field(CONF_SESSION_ENERGY_ENTITY, "sensor"): entity("sensor"),
         })
         return self.async_show_form(step_id="entities", data_schema=schema)
 
@@ -80,10 +93,19 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             self._data.update(user_input)
             return await self.async_step_options()
+        suggestions = discover_entities(self.hass)
+
+        def field(key: str, required: bool = False):
+            default = (suggestions.get(key) or [{}])[0].get("entity_id")
+            if required:
+                return vol.Required(key, default=default) if default else vol.Required(key)
+            return vol.Optional(key, default=default) if default else vol.Optional(key)
+
         schema = vol.Schema({
-            vol.Required(CONF_TARIFF_ENTITY): entity("sensor"),
-            vol.Optional(CONF_SOLAR_FORECAST_ENTITY): entity("sensor"),
-            vol.Optional(CONF_SOLAR_NOW_ENTITY): entity("sensor"),
+            field(CONF_TARIFF_ENTITY, True): entity("sensor"),
+            vol.Required(CONF_TARIFF_PROVIDER, default=DEFAULTS[CONF_TARIFF_PROVIDER]): vol.In(TARIFF_PROVIDERS),
+            field(CONF_SOLAR_FORECAST_ENTITY): entity("sensor"),
+            field(CONF_SOLAR_NOW_ENTITY): entity("sensor"),
         })
         return self.async_show_form(step_id="energy", data_schema=schema)
 
@@ -97,6 +119,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             vol.Required(CONF_EFFICIENCY, default=DEFAULTS[CONF_EFFICIENCY]): vol.Coerce(float),
             vol.Required(CONF_TARGET_SOC, default=DEFAULTS[CONF_TARGET_SOC]): vol.Coerce(float),
             vol.Required(CONF_ERE_RATE, default=DEFAULTS[CONF_ERE_RATE]): vol.Coerce(float),
+            vol.Required(CONF_CONTROL_MODE, default=DEFAULTS[CONF_CONTROL_MODE]): vol.In(CONTROL_MODES),
             vol.Optional(CONF_AI_ENABLED, default=False): bool,
             vol.Optional(CONF_AI_MODE, default=DEFAULTS[CONF_AI_MODE]): vol.In(AI_MODES),
             vol.Optional(CONF_AI_API_KEY, default=""): api_key_selector(),
@@ -127,6 +150,8 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             vol.Required(CONF_EFFICIENCY, default=values[CONF_EFFICIENCY]): vol.Coerce(float),
             vol.Required(CONF_TARGET_SOC, default=values[CONF_TARGET_SOC]): vol.Coerce(float),
             vol.Required(CONF_ERE_RATE, default=values[CONF_ERE_RATE]): vol.Coerce(float),
+            vol.Required(CONF_CONTROL_MODE, default=values[CONF_CONTROL_MODE]): vol.In(CONTROL_MODES),
+            vol.Required(CONF_TARIFF_PROVIDER, default=values[CONF_TARIFF_PROVIDER]): vol.In(TARIFF_PROVIDERS),
             vol.Optional(CONF_AI_ENABLED, default=values[CONF_AI_ENABLED]): bool,
             vol.Optional(CONF_AI_MODE, default=values[CONF_AI_MODE]): vol.In(AI_MODES),
             vol.Optional(CONF_AI_API_KEY, default=values.get(CONF_AI_API_KEY, "")): api_key_selector(),

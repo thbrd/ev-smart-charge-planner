@@ -20,6 +20,7 @@ from .const import (
     CONF_CHARGER_STATE_ENTITY,
     CONF_CHARGER_SWITCH_ENTITY,
     CONF_CHARGING_ENTITY,
+    CONF_CONTROL_MODE,
     CONF_EFFICIENCY,
     CONF_ERE_RATE,
     CONF_PLUG_ENTITY,
@@ -29,15 +30,18 @@ from .const import (
     CONF_SOLAR_FORECAST_ENTITY,
     CONF_SOLAR_NOW_ENTITY,
     CONF_TARIFF_ENTITY,
+    CONF_TARIFF_PROVIDER,
     CONF_TARGET_ENTITY,
     CONF_TARGET_SOC,
     CONF_TELEGRAM_CHAT_ID,
     CONF_TELEGRAM_ENABLED,
     CONF_TELEGRAM_SERVICE,
     DEFAULTS,
+    SETUP_ENTITY_KEYS,
     TELEGRAM_TEMPLATE_KEYS,
 )
 from .history import SessionHistory
+from .discovery import discover_entities
 from .planner import make_plan, normalize_slots, number
 
 _LOGGER = logging.getLogger(__name__)
@@ -65,9 +69,11 @@ class EVSmartChargeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._session: dict[str, Any] | None = None
         self._last_session: dict[str, Any] | None = None
         self._last_ai_reason = ""
+        self.discovery_candidates: dict[str, list[dict[str, Any]]] = {}
         super().__init__(hass, logger=_LOGGER, name="EV Smart Charge Planner", update_interval=timedelta(seconds=30))
 
     async def async_initialize(self) -> None:
+        self.discovery_candidates = discover_entities(self.hass)
         await self.history.async_load()
         self._session = self.history.active_session
         if self.history.sessions:
@@ -84,6 +90,54 @@ class EVSmartChargeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     def async_update_options_from_entry(self) -> None:
         self.options = {**DEFAULTS, **self.entry.data, **self.entry.options}
         self.async_set_updated_data(self.data or {})
+
+    def async_update_setup(self, values: dict[str, Any]) -> None:
+        """Persist wizard-selected entities and safe control settings."""
+        updates = {key: value for key, value in values.items() if value is not None}
+        data = dict(self.entry.data)
+        required = {CONF_SOC_ENTITY, CONF_PLUG_ENTITY, CONF_CHARGER_STATE_ENTITY, CONF_CHARGER_SWITCH_ENTITY, CONF_TARIFF_ENTITY}
+        for key in (*SETUP_ENTITY_KEYS, CONF_TARIFF_PROVIDER, CONF_CONTROL_MODE):
+            if key not in updates:
+                continue
+            value = str(updates[key]).strip()
+            if value:
+                data[key] = value
+            elif key not in required:
+                data.pop(key, None)
+        self.hass.config_entries.async_update_entry(self.entry, data=data)
+        self.options = {**DEFAULTS, **data, **self.entry.options}
+        self.async_set_updated_data(self.data or {})
+
+    async def async_test_connection(self) -> dict[str, Any]:
+        """Validate configured sources without touching the charger."""
+        self.discovery_candidates = discover_entities(self.hass)
+        checks: dict[str, dict[str, Any]] = {}
+        required = (CONF_SOC_ENTITY, CONF_PLUG_ENTITY, CONF_CHARGER_STATE_ENTITY, CONF_CHARGER_SWITCH_ENTITY, CONF_TARIFF_ENTITY)
+        for key in SETUP_ENTITY_KEYS:
+            entity_id = self.options.get(key)
+            if not entity_id:
+                checks[key] = {"status": "missing", "entity_id": None}
+                continue
+            state = self.hass.states.get(entity_id)
+            value = state.state if state else None
+            checks[key] = {
+                "status": "ok" if state and value not in ("unknown", "unavailable") else "unavailable",
+                "entity_id": entity_id,
+                "value": value,
+            }
+        snapshot = self.snapshot()
+        tariff_count = len(snapshot.get("tariff_slots") or [])
+        if tariff_count == 0:
+            checks[CONF_TARIFF_ENTITY] = {**checks.get(CONF_TARIFF_ENTITY, {}), "status": "warning", "forecast_slots": 0}
+        failed = [key for key in required if checks.get(key, {}).get("status") != "ok"]
+        status = "ready" if not failed and tariff_count else "warning"
+        reason = "Alle vereiste bronnen en de tariefforecast zijn beschikbaar." if status == "ready" else (
+            "Ontbrekende of onbeschikbare bronnen: " + ", ".join(failed) if failed else "De tariefsensor heeft nog geen forecastblokken."
+        )
+        result = {"status": status, "reason": reason, "checks": checks, "tariff_slots": tariff_count}
+        self.data = {**(self.data or {}), "connection_test": result, "snapshot": snapshot}
+        self.async_set_updated_data(self.data)
+        return result
 
     def snapshot(self) -> dict[str, Any]:
         config = self.options
@@ -124,6 +178,12 @@ class EVSmartChargeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 "charge_efficiency": number(config.get(CONF_EFFICIENCY), DEFAULTS[CONF_EFFICIENCY]),
                 "target_soc_percent": number(config.get(CONF_TARGET_SOC), DEFAULTS[CONF_TARGET_SOC]),
                 "ere_rate_eur_per_kwh": number(config.get(CONF_ERE_RATE), DEFAULTS[CONF_ERE_RATE]),
+            },
+            "configuration": {
+                key: config.get(key) for key in SETUP_ENTITY_KEYS if config.get(key)
+            } | {
+                CONF_TARIFF_PROVIDER: config.get(CONF_TARIFF_PROVIDER, DEFAULTS[CONF_TARIFF_PROVIDER]),
+                CONF_CONTROL_MODE: config.get(CONF_CONTROL_MODE, DEFAULTS[CONF_CONTROL_MODE]),
             },
         }
 
@@ -243,20 +303,28 @@ class EVSmartChargeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             return False
         return True
 
-    def _safe_to_start(self, snapshot: dict[str, Any]) -> bool:
+    def _safe_to_start(self, snapshot: dict[str, Any], target_soc: float | None = None) -> bool:
         ev = snapshot["ev"]
         charger = snapshot["charger"]
         plug = str(ev.get("plug_state") or "").lower()
         charger_state = str(charger.get("state") or "").lower()
         soc = number(ev.get("soc_percent"))
-        target = number(snapshot["settings"].get("target_soc_percent"), 95)
+        target = number(target_soc, None)
+        if target is None:
+            target = number(snapshot["settings"].get("target_soc_percent"), 95)
         plugged = plug in {"connected", "on", "true", "suspended", "charging"} or charger_state in {"suspended", "charging"}
         return plugged and soc is not None and soc < target and charger_state not in {"no_ev_connected", "fault", "error", "invalid"}
 
     async def _async_execute_if_due(self, data: dict[str, Any]) -> None:
+        if self.options.get(CONF_CONTROL_MODE, DEFAULTS[CONF_CONTROL_MODE]) != "hacs":
+            return
         snapshot = data["snapshot"]
         if self._session:
-            target = number(snapshot["settings"].get("target_soc_percent"), 95) or 95
+            plan = data.get("plan") or {}
+            target = number(plan.get("target_soc_percent"), None)
+            if target is None:
+                target = number(snapshot["settings"].get("target_soc_percent"), 95)
+            target = target or 95
             soc = number(snapshot["ev"].get("soc_percent"))
             if soc is not None and soc >= target:
                 switch = self.options.get(CONF_CHARGER_SWITCH_ENTITY)
@@ -270,7 +338,9 @@ class EVSmartChargeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         start = datetime.fromisoformat(selected["start_at"])
         if datetime.now(start.tzinfo) < start:
             return
-        if not self._safe_to_start(snapshot):
+        plan = (self.data or {}).get("plan") or {}
+        plan_target = number(plan.get("target_soc_percent"), None)
+        if not self._safe_to_start(snapshot, plan_target):
             return
         switch = self.options.get(CONF_CHARGER_SWITCH_ENTITY)
         if switch and state_value(self.hass, switch) != "on":
@@ -292,8 +362,12 @@ class EVSmartChargeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         return {"kwh": round(kwh, 3), "cost": round(cost, 2), "ere": ere, "net": round(cost - ere, 2)}
 
     async def async_start(self) -> None:
+        if self.options.get(CONF_CONTROL_MODE, DEFAULTS[CONF_CONTROL_MODE]) != "hacs":
+            raise ValueError("HACS-besturing staat uit; Node-RED blijft de laadpaal besturen.")
         snapshot = self.snapshot()
-        if not self._safe_to_start(snapshot):
+        plan = (self.data or {}).get("plan") or {}
+        plan_target = number(plan.get("target_soc_percent"), None)
+        if not self._safe_to_start(snapshot, plan_target):
             await self.async_send_telegram("blocked")
             raise ValueError("Start geblokkeerd: auto of laadpaal is niet veilig aangesloten.")
         switch = self.options.get(CONF_CHARGER_SWITCH_ENTITY)
@@ -306,6 +380,8 @@ class EVSmartChargeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         await self.async_send_telegram("start")
 
     async def async_stop(self, reason: str = "manual") -> None:
+        if self.options.get(CONF_CONTROL_MODE, DEFAULTS[CONF_CONTROL_MODE]) != "hacs":
+            raise ValueError("HACS-besturing staat uit; Node-RED blijft de laadpaal besturen.")
         switch = self.options.get(CONF_CHARGER_SWITCH_ENTITY)
         await self.hass.services.async_call("switch", "turn_off", {"entity_id": switch}, blocking=True)
         await self._async_finish_session(reason)

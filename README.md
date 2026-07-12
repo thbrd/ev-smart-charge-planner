@@ -28,7 +28,7 @@ De integratie gebruikt GitHub-tags en releases. HACS toont daardoor versies in p
 De huidige stabiele versie is:
 
 ```text
-v0.4.3
+v0.5.0
 ```
 
 Na een nieuwe release:
@@ -88,6 +88,20 @@ De automatische meldingen zijn:
 
 Zet Telegram uit tijdens het testen met de schakelaar als je geen automatische meldingen wilt ontvangen.
 
+## Setup wizard en veilige migratie
+
+Vanaf v0.5.0 staat er een setup wizard in het sidebar-panel `EV Smart Charge`. De wizard:
+
+1. zoekt passende auto-, laadpaal-, tarief- en zonne-entiteiten;
+2. toont per veld een duidelijke naam, de entity-ID en de reden voor de suggestie;
+3. laat de koppelingen en energieprovider opslaan;
+4. voert een verbindingstest uit zonder de laadpaal te schakelen;
+5. staat standaard op `Alleen monitoren/testen (Node-RED)`.
+
+In deze standaardmodus leest de integratie de sensoren uit, berekent lokale plannen en toont testresultaten, maar zet zij nooit de laadpaal aan of uit. Daardoor kan de HACS-integratie naast de bestaande Node-RED-flow draaien tijdens het testen. Zet pas `HACS mag besturen` aan nadat Node-RED voor deze laadpaal is uitgeschakeld; gebruik nooit twee actieve besturingen tegelijk.
+
+De tariefprovider is instelbaar op automatisch, Zonneplan, Tibber, ANWB Dynamisch of generiek. De planner verwacht uiteindelijk een forecast met starttijd, eindtijd en prijs; Zonneplan levert dit in het forecast-attribuut van de tariefsensor. Zie ook de [Zonneplan-integratiebeschrijving](https://github.com/fsaris/home-assistant-zonneplan-one) voor de beschikbare forecastgegevens.
+
 ## Dashboard toevoegen
 
 Het voorbeeld-dashboard staat in [`dashboards/ev-smart-charge-dashboard.yaml`](dashboards/ev-smart-charge-dashboard.yaml).
@@ -97,7 +111,7 @@ Het voorbeeld-dashboard staat in [`dashboards/ev-smart-charge-dashboard.yaml`](d
 3. Kopieer de inhoud van het YAML-bestand naar de dashboardconfiguratie.
 4. Controleer na opslaan of de entiteiten van de integratie dezelfde object-ID's hebben.
 
-Het sidebar-panel bevat laadplanning, sessiegegevens, dag-, maand- en jaaroverzichten, Telegraminstellingen en afzonderlijke Telegram-testknoppen. De sensorverbindingen en gevoelige opties blijven beschikbaar via de native Home Assistant-integratie-instellingen.
+Het sidebar-panel bevat laadplanning, sessiegegevens, dag-, maand- en jaaroverzichten, een setup wizard, verbindingstest, Telegraminstellingen en afzonderlijke Telegram-testknoppen. De sensorverbindingen en gevoelige opties blijven ook beschikbaar via de native Home Assistant-integratie-instellingen.
 
 ## Testprocedure
 
@@ -143,18 +157,21 @@ De eerste integratie staat onder `custom_components/ev_smart_charge/` en bevat:
 - uitlezing van tariefforecast, zonneforecast, huidig zonnevermogen, auto-status en laadpaalstatus.
 - Zonneplan-forecast parsing voor `start_date`, geneste prijsvelden en uur- of kwartierblokken.
 - Een verduidelijkte testtoelichting wanneer geen geldig laadvenster beschikbaar is.
+- automatische entity-suggesties voor verschillende automerken, laadpalen en energieproviders;
+- een wizard om alle koppelingen te controleren en zonder schakelen te testen;
+- een monitor-only veiligheidsmodus zodat Node-RED tijdelijk de actieve besturing kan blijven.
 
 De Node-RED-export uit de persoonlijke installatie hoort niet bij deze installatie-instructie.
 
 ### Bekende MVP-beperkingen
 
-- De tariefparser ondersteunt gangbare forecast-attributen; de exacte Zonneplan-attribuutstructuur moet nog met een echte Home Assistant-export worden gevalideerd.
+- De tariefparser ondersteunt gangbare forecast-attributen, waaronder Zonneplan-uur- en kwartierblokken; andere providers kunnen kleine verschillen in hun forecaststructuur hebben.
 - Sessieprijzen worden in deze eerste versie proportioneel uit het gekozen plan berekend. Exacte energie-toewijzing per werkelijk prijsblok volgt in een volgende versie.
 - Telegramnotificaties gebruiken de bestaande Home Assistant Telegram-service. De service, chat-ID en berichttemplates zijn instelbaar.
 - Het dashboard gebruikt alleen standaard Home Assistant-kaarten.
 - De actuele FordPass/Peblar target-select wordt nog niet automatisch gewijzigd door de MVP.
 - De simulatie- en testservices schakelen niets en slaan geen plan op.
-- Exacte kosten per werkelijk prijsblok en uitgebreide herstelpaden zijn nog een volgende ontwikkelstap.
+- Provider-specifieke adapters en uitgebreide herstelpaden blijven uitbreidpunten voor volgende releases.
 
 ## Doel
 
@@ -249,6 +266,8 @@ ev_smart_charge.status
 ev_smart_charge.simulate_plan
 ev_smart_charge.test_flex
 ev_smart_charge.test_plan
+ev_smart_charge.update_setup
+ev_smart_charge.test_connection
 ev_smart_charge.telegram_test
 ev_smart_charge.telegram_send
 ```
@@ -292,12 +311,12 @@ De Node-RED-versie en de HACS-integratie moeten dezelfde onderdelen delen:
 
 ## Roadmap
 
-- [ ] Generiek datamodel vastleggen
-- [ ] Lokale planner losmaken van FordPass en Peblar
-- [ ] Kandidatenmodel voor uur- en kwartiertarieven toevoegen
-- [ ] AI-keuze beperken tot bestaande kandidaten
-- [ ] Validator- en safety-contract vastleggen
-- [ ] Persistent sessie- en kostenmodel ontwerpen
+- [x] Generiek datamodel vastleggen
+- [x] Lokale planner losmaken van FordPass en Peblar
+- [x] Kandidatenmodel voor uur- en kwartiertarieven toevoegen
+- [x] AI-keuze beperken tot bestaande kandidaten
+- [x] Validator- en safety-contract vastleggen
+- [x] Persistent sessie- en kostenmodel ontwerpen
 - [ ] Vereenvoudigde Node-RED-compatibiliteitslaag maken
 - [x] Home Assistant custom integration bouwen
 - [x] Config flow voor auto-, laadpaal- en tariefsensoren toevoegen
@@ -305,6 +324,8 @@ De Node-RED-versie en de HACS-integratie moeten dezelfde onderdelen delen:
 - [x] Standaard Lovelace-dashboard maken
 - [x] Telegram-configuratie en testberichten toevoegen
 - [x] Sidebar-panel voor dagelijkse bediening maken
+- [x] Guided setup wizard met entity-discovery en verbindingstest maken
+- [x] Monitor-only modus voor veilige migratie naast Node-RED toevoegen
 - [x] Test flex en test plan vanuit het sidebar-panel toevoegen
 - [x] Tarief- en zonneforecast zichtbaar maken
 - [ ] Exacte kosten per werkelijk prijsblok toevoegen

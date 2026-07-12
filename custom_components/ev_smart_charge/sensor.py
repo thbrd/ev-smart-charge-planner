@@ -57,6 +57,9 @@ SENSOR_DEFINITIONS = [
     ("year_ere", "Jaar ERE", "EUR"),
     ("year_net", "Jaar netto", "EUR"),
     ("year_sessions", "Jaar sessies", None),
+    ("setup_status", "Setupstatus", None),
+    ("connection_test_status", "Verbindingstest status", None),
+    ("connection_test_reason", "Verbindingstest toelichting", None),
     ("test_status", "Testplan status", None),
     ("test_mode", "Testplan modus", None),
     ("test_reason", "Testplan toelichting", None),
@@ -98,6 +101,15 @@ class EVSensor(CoordinatorEntity[EVSmartChargeCoordinator], SensorEntity):
         simulation = data.get("simulation") or {}
         simulation_selected = simulation.get("selected") or {}
         aggregates = data.get("aggregates", {})
+        connection_test = data.get("connection_test") or {}
+        configuration = snapshot.get("configuration", {})
+        if self.key == "setup_status":
+            required = ("soc_entity", "plug_entity", "charger_state_entity", "charger_switch_entity", "tariff_entity")
+            return "ready" if all(configuration.get(key) for key in required) else "needs_configuration"
+        if self.key == "connection_test_status":
+            return connection_test.get("status", "not_run")
+        if self.key == "connection_test_reason":
+            return connection_test.get("reason", "Voer de verbindingstest uit vanuit het sidebar-panel.")
         if self.key == "status":
             return (data.get("plan") or {}).get("status", "idle")
         if self.key == "soc":
@@ -182,4 +194,11 @@ class EVSensor(CoordinatorEntity[EVSmartChargeCoordinator], SensorEntity):
             }
         if self.key == "test_status":
             return {"reason": simulation.get("reason", "—"), "mode": simulation.get("test_label", "—")}
+        if self.key == "setup_status":
+            return {
+                "configuration": snapshot.get("configuration", {}),
+                "candidates": self.coordinator.discovery_candidates,
+            }
+        if self.key in ("connection_test_status", "connection_test_reason"):
+            return (data.get("connection_test") or {}).get("checks", {})
         return None

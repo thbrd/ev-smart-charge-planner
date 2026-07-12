@@ -82,6 +82,100 @@ test_plan:
           step: 5
           mode: box
 
+update_setup:
+  name: Update setup
+  description: Sla de wizardkeuzes voor sensoren en besturing op.
+  fields:
+    soc_entity:
+      name: Auto SoC
+      required: false
+      selector:
+        entity:
+          domain: sensor
+    plug_entity:
+      name: Auto aangesloten
+      required: false
+      selector:
+        entity:
+          domain:
+            - sensor
+            - binary_sensor
+    charging_entity:
+      name: Auto laadstatus
+      required: false
+      selector:
+        entity:
+          domain:
+            - sensor
+            - binary_sensor
+    charger_state_entity:
+      name: Peblar/laadpaalstatus
+      required: false
+      selector:
+        entity:
+          domain:
+            - sensor
+            - binary_sensor
+    charger_switch_entity:
+      name: Laadpaal aan/uit
+      required: false
+      selector:
+        entity:
+          domain: switch
+    power_entity:
+      name: Laadvermogen
+      required: false
+      selector:
+        entity:
+          domain: sensor
+    session_energy_entity:
+      name: Sessie-energie
+      required: false
+      selector:
+        entity:
+          domain: sensor
+    tariff_entity:
+      name: Tarief + forecast
+      required: false
+      selector:
+        entity:
+          domain: sensor
+    solar_forecast_entity:
+      name: Zonneforecast
+      required: false
+      selector:
+        entity:
+          domain: sensor
+    solar_now_entity:
+      name: Zonnevermogen nu
+      required: false
+      selector:
+        entity:
+          domain: sensor
+    tariff_provider:
+      name: Energieprovider
+      required: false
+      selector:
+        select:
+          options:
+            - auto
+            - zonneplan
+            - tibber
+            - anwb
+            - generic
+    control_mode:
+      name: Besturingsmodus
+      required: false
+      selector:
+        select:
+          options:
+            - monitor
+            - hacs
+
+test_connection:
+  name: Test connections
+  description: Controleer de gekoppelde sensoren en forecast zonder de laadpaal te schakelen.
+
 start:
   name: Start charging
   description: Start laden na een lokale veiligheidscontrole.

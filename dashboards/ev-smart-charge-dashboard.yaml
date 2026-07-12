@@ -72,6 +72,24 @@ views:
           - entity: sensor.ev_smart_charge_test_windows
             name: Prijsblokken
 
+      - type: entities
+        title: Setup en verbinding
+        show_header_toggle: false
+        entities:
+          - entity: sensor.ev_smart_charge_setup_status
+            name: Setupstatus
+          - entity: sensor.ev_smart_charge_connection_test_status
+            name: Verbindingstest
+          - entity: sensor.ev_smart_charge_connection_test_reason
+            name: Toelichting
+          - type: button
+            name: Test verbinding
+            icon: mdi:connection
+            action_name: TEST
+            tap_action:
+              action: call-service
+              service: ev_smart_charge.test_connection
+
       - type: grid
         columns: 2
         square: false

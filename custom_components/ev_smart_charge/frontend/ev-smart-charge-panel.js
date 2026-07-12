@@ -135,6 +135,14 @@ class EvSmartChargePanel extends HTMLElement {
     this._service("ev_smart_charge", "create_plan", data);
   }
 
+  _saveSetup() {
+    const data = {};
+    this.shadowRoot.querySelectorAll("[data-setup-key]").forEach((input) => {
+      data[input.dataset.setupKey] = input.value;
+    });
+    this._service("ev_smart_charge", "update_setup", data);
+  }
+
   _wire() {
     this.shadowRoot.querySelectorAll("[data-action]").forEach((button) => {
       button.addEventListener("click", () => {
@@ -144,6 +152,8 @@ class EvSmartChargePanel extends HTMLElement {
         if (action === "plan-deadline") this._plan("deadline");
         if (action === "test-flex") this._test("test flex");
         if (action === "test-plan") this._test("test plan");
+        if (action === "setup-save") this._saveSetup();
+        if (action === "setup-test") this._service("ev_smart_charge", "test_connection");
         if (action === "start") this._service("ev_smart_charge", "start");
         if (action === "stop") this._service("ev_smart_charge", "stop");
         if (action === "reset") this._service("ev_smart_charge", "reset");
@@ -198,6 +208,43 @@ class EvSmartChargePanel extends HTMLElement {
     return `<label class="template"><span>${label}</span><textarea data-text-entity="${entityId}">${this._escape(this._state(entityId, ""))}</textarea></label>`;
   }
 
+  _setupField(key, label) {
+    const setup = this._attributes("sensor.ev_smart_charge_setup_status");
+    const configuration = setup.configuration || {};
+    const candidates = setup.candidates?.[key] || [];
+    const current = configuration[key] || "";
+    const options = [...candidates];
+    if (current && !options.some((candidate) => candidate.entity_id === current)) {
+      options.unshift({ entity_id: current, name: `${current} (huidige keuze)`, reason: "opgeslagen koppeling" });
+    }
+    return `<label class="setup-field"><span>${label}</span><select data-setup-key="${key}"><option value="">Niet gekoppeld</option>${options.map((candidate) => `<option value="${this._escape(candidate.entity_id)}" ${candidate.entity_id === current ? "selected" : ""}>${this._escape(candidate.name || candidate.entity_id)} — ${this._escape(candidate.reason || "suggestie")}</option>`).join("")}</select></label>`;
+  }
+
+  _setupCard() {
+    const setup = this._attributes("sensor.ev_smart_charge_setup_status");
+    const configuration = setup.configuration || {};
+    const provider = configuration.tariff_provider || "auto";
+    const controlMode = configuration.control_mode || "monitor";
+    return this._card("Setup wizard", `<p class="muted">De wizard zoekt passende entities op basis van naam, apparaatklasse en eenheid. Controleer de suggesties en sla ze daarna op.</p>
+      <div class="setup-grid">
+        ${this._setupField("soc_entity", "Auto SoC — accupercentage")}
+        ${this._setupField("plug_entity", "Auto aangesloten — connected/disconnected")}
+        ${this._setupField("charging_entity", "Auto laadstatus — charging/not charging")}
+        ${this._setupField("target_entity", "Auto doelpercentage — optioneel")}
+        ${this._setupField("charger_state_entity", "Laadpaalstatus — charging/suspended/no EV")}
+        ${this._setupField("charger_switch_entity", "Laadpaal aan/uit — on/off")}
+        ${this._setupField("power_entity", "Laadvermogen — W/kW")}
+        ${this._setupField("session_energy_entity", "Sessie-energie — kWh")}
+        ${this._setupField("tariff_entity", "Tarief + forecast")}
+        ${this._setupField("solar_forecast_entity", "Zonneforecast — optioneel")}
+        ${this._setupField("solar_now_entity", "Zonnevermogen nu — optioneel")}
+        <label class="setup-field"><span>Energieprovider</span><select data-setup-key="tariff_provider"><option value="auto" ${provider === "auto" ? "selected" : ""}>Automatisch</option><option value="zonneplan" ${provider === "zonneplan" ? "selected" : ""}>Zonneplan</option><option value="tibber" ${provider === "tibber" ? "selected" : ""}>Tibber</option><option value="anwb" ${provider === "anwb" ? "selected" : ""}>ANWB Dynamisch</option><option value="generic" ${provider === "generic" ? "selected" : ""}>Generiek</option></select></label>
+        <label class="setup-field"><span>Besturing</span><select data-setup-key="control_mode"><option value="monitor" ${controlMode === "monitor" ? "selected" : ""}>Alleen monitoren/testen (Node-RED)</option><option value="hacs" ${controlMode === "hacs" ? "selected" : ""}>HACS mag besturen</option></select></label>
+      </div>
+      <div class="button-row"><button class="primary" data-action="setup-save">Koppelingen opslaan</button><button data-action="setup-test">Verbinding testen</button><button data-action="open-settings">Geavanceerde instellingen</button></div>
+      <div class="connection-summary">Status: <strong>${this._escape(this._state("sensor.ev_smart_charge_setup_status"))}</strong> · Test: <strong>${this._escape(this._state("sensor.ev_smart_charge_connection_test_status"))}</strong><br>${this._escape(this._state("sensor.ev_smart_charge_connection_test_reason", "Nog niet getest"))}</div>`);
+  }
+
   _render() {
     if (!this._hass || !this.shadowRoot) return;
     const active = this.shadowRoot.activeElement;
@@ -219,6 +266,8 @@ class EvSmartChargePanel extends HTMLElement {
         <div class="notice" role="status"></div>
 
         ${this._integrationConfigured() ? "" : `<div class="warning"><strong>Integratie nog niet gekoppeld</strong><br>Open Instellingen → Apparaten & diensten → EV Smart Charge Planner en configureer de sensorverbindingen. Daarna verschijnen de entities in dit panel.</div>`}
+
+        ${this._setupCard()}
 
         ${this._card("Live status", `<div class="metrics">
           ${this._metric("Planstatus", "sensor.ev_smart_charge_status")}
@@ -324,6 +373,11 @@ class EvSmartChargePanel extends HTMLElement {
       .periods { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; }
       .periods > div { border-top:3px solid var(--ev-accent); background:var(--secondary-background-color); border-radius:9px; padding:14px; }
       .periods .metric { background:transparent; border-left:0; padding:4px 0; margin-bottom:4px; }
+      .setup-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-top:16px; }
+      .setup-field { min-width:0; }
+      select { width:100%; color:var(--primary-text-color); background:var(--input-fill-color,transparent); border:1px solid var(--divider-color); border-radius:8px; font:inherit; padding:10px 11px; }
+      .connection-summary { margin-top:16px; padding:12px 14px; background:var(--secondary-background-color); border-radius:8px; color:var(--secondary-text-color); line-height:1.5; }
+      .connection-summary strong { color:var(--primary-text-color); }
       .form-row,.button-row,.settings-grid { display:flex; flex-wrap:wrap; gap:10px; margin-top:16px; }
       label { display:flex; flex-direction:column; gap:6px; color:var(--secondary-text-color); font-size:13px; flex:1 1 160px; }
       input,textarea { color:var(--primary-text-color); background:var(--input-fill-color,transparent); border:1px solid var(--divider-color); border-radius:8px; font:inherit; padding:10px 11px; }
@@ -344,7 +398,7 @@ class EvSmartChargePanel extends HTMLElement {
       .toggle input { width:20px; height:20px; }
       .notice { min-height:0; opacity:0; color:var(--success-color,#43a047); margin:0 0 0; transition:opacity .2s; }
       .notice.visible { min-height:22px; opacity:1; margin-bottom:10px; }
-      @media (max-width:800px) { main { padding:18px 14px 32px; } .columns,.periods,.templates { grid-template-columns:1fr; } .hero { align-items:flex-start; flex-direction:column; } h1 { font-size:28px; } .window { grid-template-columns:1fr 1fr; } .window strong,.window span:last-child { text-align:left; } }
+      @media (max-width:800px) { main { padding:18px 14px 32px; } .columns,.periods,.templates,.setup-grid { grid-template-columns:1fr; } .hero { align-items:flex-start; flex-direction:column; } h1 { font-size:28px; } .window { grid-template-columns:1fr 1fr; } .window strong,.window span:last-child { text-align:left; } }
     `;
   }
 }

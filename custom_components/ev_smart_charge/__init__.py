@@ -14,6 +14,9 @@ from homeassistant.helpers.typing import ConfigType
 from .const import (
     DOMAIN,
     PLATFORMS,
+    CONF_CONTROL_MODE,
+    CONF_TARIFF_PROVIDER,
+    SETUP_ENTITY_KEYS,
     SERVICE_CREATE_PLAN,
     SERVICE_RESET,
     SERVICE_SIMULATE_PLAN,
@@ -24,6 +27,8 @@ from .const import (
     SERVICE_TELEGRAM_TEST,
     SERVICE_TEST_FLEX,
     SERVICE_TEST_PLAN,
+    SERVICE_TEST_CONNECTION,
+    SERVICE_UPDATE_SETUP,
     TELEGRAM_EVENTS,
 )
 from .coordinator import EVSmartChargeCoordinator
@@ -31,6 +36,7 @@ from .coordinator import EVSmartChargeCoordinator
 SERVICE_SCHEMA = vol.Schema({vol.Optional("mode", default="flex"): vol.In(["today", "flex", "deadline"]), vol.Optional("deadline"): str, vol.Optional("target_soc"): vol.Coerce(float)})
 TELEGRAM_SCHEMA = vol.Schema({vol.Optional("event", default="test"): vol.In(TELEGRAM_EVENTS), vol.Optional("message"): str})
 TEST_SCHEMA = vol.Schema({vol.Optional("target_soc"): vol.Coerce(float)})
+SETUP_SCHEMA = vol.Schema({vol.Optional(key): str for key in (*SETUP_ENTITY_KEYS, CONF_TARIFF_PROVIDER, CONF_CONTROL_MODE)})
 PANEL_URL = "/ev_smart_charge_panel"
 PANEL_PATH = "ev-smart-charge-panel"
 PANEL_FRONTEND_URL = "ev-smart-charge"
@@ -113,6 +119,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 label="test plan",
             )
 
+        async def update_setup(call: ServiceCall) -> None:
+            coordinator_for_call().async_update_setup(dict(call.data))
+
+        async def test_connection(call: ServiceCall) -> None:
+            await coordinator_for_call().async_test_connection()
+
         hass.services.async_register(DOMAIN, SERVICE_CREATE_PLAN, create_plan, schema=SERVICE_SCHEMA)
         hass.services.async_register(DOMAIN, SERVICE_SIMULATE_PLAN, simulate_plan, schema=SERVICE_SCHEMA)
         hass.services.async_register(DOMAIN, SERVICE_START, start)
@@ -123,6 +135,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.services.async_register(DOMAIN, SERVICE_TELEGRAM_SEND, telegram_send, schema=TELEGRAM_SCHEMA)
         hass.services.async_register(DOMAIN, SERVICE_TEST_FLEX, test_flex, schema=TEST_SCHEMA)
         hass.services.async_register(DOMAIN, SERVICE_TEST_PLAN, test_plan, schema=TEST_SCHEMA)
+        hass.services.async_register(DOMAIN, SERVICE_UPDATE_SETUP, update_setup, schema=SETUP_SCHEMA)
+        hass.services.async_register(DOMAIN, SERVICE_TEST_CONNECTION, test_connection)
     return True
 
 
