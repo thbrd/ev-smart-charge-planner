@@ -1,0 +1,154 @@
+title: EV Smart Charge
+views:
+  - title: EV laden
+    path: ev-smart-charge
+    icon: mdi:ev-station
+    cards:
+      - type: markdown
+        content: |
+          # EV Smart Charge
+          Lokale laadplanning met optionele AI-keuze.
+
+      - type: grid
+        columns: 2
+        square: false
+        cards:
+          - type: tile
+            entity: sensor.ev_smart_charge_status
+            name: Planstatus
+            icon: mdi:state-machine
+          - type: tile
+            entity: sensor.ev_smart_charge_soc
+            name: SoC
+            icon: mdi:battery
+          - type: tile
+            entity: sensor.ev_smart_charge_power_kw
+            name: Laadvermogen
+            icon: mdi:flash
+          - type: tile
+            entity: sensor.ev_smart_charge_current_tariff
+            name: Huidig tarief
+            icon: mdi:currency-eur
+
+      - type: entities
+        title: Actief laadplan
+        show_header_toggle: false
+        entities:
+          - entity: sensor.ev_smart_charge_plan_start
+            name: Start
+          - entity: sensor.ev_smart_charge_plan_end
+            name: Verwacht klaar
+          - entity: sensor.ev_smart_charge_plan_kwh
+            name: Benodigde kWh
+          - entity: sensor.ev_smart_charge_plan_cost
+            name: Kosten
+          - entity: sensor.ev_smart_charge_plan_ere
+            name: ERE
+          - entity: sensor.ev_smart_charge_plan_net
+            name: Netto
+
+      - type: grid
+        columns: 2
+        square: false
+        cards:
+          - type: button
+            name: Plan vandaag
+            icon: mdi:calendar-today
+            tap_action:
+              action: call-service
+              service: ev_smart_charge.create_plan
+              service_data:
+                mode: today
+          - type: button
+            name: Plan flexibel
+            icon: mdi:weather-sunny
+            tap_action:
+              action: call-service
+              service: ev_smart_charge.create_plan
+              service_data:
+                mode: flex
+          - type: button
+            name: Simulatie
+            icon: mdi:flask-outline
+            tap_action:
+              action: call-service
+              service: ev_smart_charge.simulate_plan
+              service_data:
+                mode: flex
+          - type: button
+            name: Start nu
+            icon: mdi:play
+            tap_action:
+              action: call-service
+              service: ev_smart_charge.start
+          - type: button
+            name: Stop
+            icon: mdi:stop
+            tap_action:
+              action: call-service
+              service: ev_smart_charge.stop
+          - type: button
+            name: Reset plan
+            icon: mdi:refresh
+            tap_action:
+              action: call-service
+              service: ev_smart_charge.reset
+
+      - type: entities
+        title: Huidige sessie
+        show_header_toggle: false
+        entities:
+          - entity: sensor.ev_smart_charge_session_kwh
+            name: Geladen kWh
+          - entity: sensor.ev_smart_charge_session_cost
+            name: Kosten
+          - entity: sensor.ev_smart_charge_session_ere
+            name: ERE
+          - entity: sensor.ev_smart_charge_session_net
+            name: Netto
+
+      - type: grid
+        columns: 3
+        square: false
+        cards:
+          - type: entities
+            title: Vandaag
+            entities:
+              - sensor.ev_smart_charge_today_kwh
+              - sensor.ev_smart_charge_today_cost
+              - sensor.ev_smart_charge_today_ere
+              - sensor.ev_smart_charge_today_net
+              - sensor.ev_smart_charge_today_sessions
+          - type: entities
+            title: Deze maand
+            entities:
+              - sensor.ev_smart_charge_month_kwh
+              - sensor.ev_smart_charge_month_cost
+              - sensor.ev_smart_charge_month_ere
+              - sensor.ev_smart_charge_month_net
+              - sensor.ev_smart_charge_month_sessions
+          - type: entities
+            title: Dit jaar
+            entities:
+              - sensor.ev_smart_charge_year_kwh
+              - sensor.ev_smart_charge_year_cost
+              - sensor.ev_smart_charge_year_ere
+              - sensor.ev_smart_charge_year_net
+              - sensor.ev_smart_charge_year_sessions
+
+      - type: entities
+        title: Instellingen
+        show_header_toggle: false
+        entities:
+          - entity: switch.ev_smart_charge_ai_enabled
+            name: AI gebruiken
+          - entity: number.ev_smart_charge_target_soc_percent
+            name: Doelpercentage
+          - entity: number.ev_smart_charge_charge_power_kw
+            name: Laadvermogen
+          - entity: number.ev_smart_charge_battery_capacity_kwh
+            name: Accucapaciteit
+          - entity: number.ev_smart_charge_charge_efficiency
+            name: Efficiëntie
+          - entity: number.ev_smart_charge_ere_rate_eur_per_kwh
+            name: ERE per kWh

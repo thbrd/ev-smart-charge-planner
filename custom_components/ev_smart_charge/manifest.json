@@ -1,0 +1,13 @@
+{
+  "domain": "ev_smart_charge",
+  "name": "EV Smart Charge Planner",
+  "version": "0.1.0",
+  "documentation": "https://github.com/thbrd/ev-smart-charge-planner",
+  "issue_tracker": "https://github.com/thbrd/ev-smart-charge-planner/issues",
+  "codeowners": ["@thbrd"],
+  "config_flow": true,
+  "single_config_entry": true,
+  "integration_type": "service",
+  "iot_class": "local_polling",
+  "requirements": []
+}

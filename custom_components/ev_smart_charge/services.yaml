@@ -1,0 +1,71 @@
+create_plan:
+  name: Create plan
+  description: Maak een laadplan met de lokale planner en optioneel AI.
+  fields:
+    mode:
+      name: Mode
+      required: false
+      selector:
+        select:
+          options:
+            - today
+            - flex
+            - deadline
+    deadline:
+      name: Deadline
+      required: false
+      selector:
+        time: {}
+    target_soc:
+      name: Doelpercentage
+      required: false
+      selector:
+        number:
+          min: 50
+          max: 100
+          step: 5
+          mode: box
+
+simulate_plan:
+  name: Simulate plan
+  description: Bereken een plan zonder de laadpaal te bedienen of een sessie te starten.
+  fields:
+    mode:
+      name: Mode
+      required: false
+      selector:
+        select:
+          options:
+            - today
+            - flex
+            - deadline
+    deadline:
+      name: Deadline
+      required: false
+      selector:
+        time: {}
+    target_soc:
+      name: Doelpercentage
+      required: false
+      selector:
+        number:
+          min: 50
+          max: 100
+          step: 5
+          mode: box
+
+start:
+  name: Start charging
+  description: Start laden na een lokale veiligheidscontrole.
+
+stop:
+  name: Stop charging
+  description: Stop laden en sluit de actieve sessie af.
+
+reset:
+  name: Reset
+  description: Wis het actieve plan zonder de laadpaal aan te zetten.
+
+status:
+  name: Refresh status
+  description: Werk de EV-status bij.

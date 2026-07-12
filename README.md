@@ -4,7 +4,41 @@ Een universele slimme laadplanner voor elektrische auto's en laadpalen.
 
 Het project berekent wanneer een auto het beste kan laden op basis van dynamische energieprijzen, laadvermogen, benodigde energie, zonneforecast en een optionele deadline. De laadpaal wordt uitsluitend aangestuurd door lokale veiligheidscontroles.
 
-> Status: ontwerp en voorbereiding. De Node-RED-flow wordt voorlopig niet gepubliceerd.
+> Status: eerste HACS-MVP in ontwikkeling. De persoonlijke Node-RED-flow wordt niet gepubliceerd.
+
+## HACS-MVP
+
+De eerste integratie staat onder `custom_components/ev_smart_charge/` en bevat:
+
+- configuratie via Home Assistant Config Flow;
+- generieke koppeling van auto-, laadpaal- en tariefentiteiten;
+- lokale planning zonder AI-afhankelijkheid;
+- optionele OpenAI-kandidaatkeuze;
+- lokale validatie en veiligheidscontrole;
+- persistent plan en sessiehistorie;
+- dag-, maand- en jaaraggregaten;
+- Home Assistant-services voor plannen, simuleren, starten, stoppen en resetten;
+- instelbare laadparameters als integratie-entiteiten in plaats van handmatige helpers.
+
+De MVP is nog niet klaar voor een productie-installatie. De exacte per-prijsblok kostenadministratie, uitgebreide herstelpaden en een kant-en-klaar Lovelace-dashboard worden in volgende stappen toegevoegd.
+
+### Installeren tijdens ontwikkeling
+
+1. Kopieer of clone deze repository.
+2. Plaats de map `custom_components/ev_smart_charge` in `/config/custom_components/`.
+3. Herstart Home Assistant.
+4. Ga naar `Instellingen → Apparaten & diensten → Integratie toevoegen`.
+5. Zoek naar `EV Smart Charge Planner`.
+
+De Node-RED-export uit de persoonlijke installatie hoort niet bij deze installatie-instructie.
+
+### Bekende MVP-beperkingen
+
+- De tariefparser ondersteunt gangbare forecast-attributen; de exacte Zonneplan-attribuutstructuur moet nog met een echte Home Assistant-export worden gevalideerd.
+- Sessieprijzen worden in deze eerste versie proportioneel uit het gekozen plan berekend. Exacte energie-toewijzing per werkelijk prijsblok volgt in een volgende versie.
+- Telegram-notificaties zijn nog niet ingebouwd; Home Assistant-services kunnen wel al vanuit een Telegram-automatisering worden aangeroepen.
+- De actuele FordPass/Peblar target-select wordt nog niet automatisch gewijzigd door de MVP.
+- De integratie is lokaal gecompileerd en met pure planner-scenario's getest. Een volledige Home Assistant-testomgeving is nog nodig voor de eerste alpha-release.
 
 ## Doel
 
@@ -146,6 +180,8 @@ De Node-RED-versie en de HACS-integratie moeten dezelfde onderdelen delen:
 - [ ] Config flow voor auto-, laadpaal- en tariefsensoren toevoegen
 - [ ] HACS-publicatie voorbereiden
 - [ ] Optionele dashboardkaart maken
+
+Een eerste standaard Lovelace-dashboard staat in `dashboards/ev-smart-charge-dashboard.yaml`. Dit bestand kan via de YAML-editor van Home Assistant worden gekopieerd. Het gebruikt alleen standaard Home Assistant-kaarten; een aparte custom dashboardkaart komt pas later.
 
 ## Bijdragen
 

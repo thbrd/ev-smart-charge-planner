@@ -1,0 +1,70 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "EV Smart Charge Planner",
+        "description": "Maak een profiel voor één auto en één laadpaal.",
+        "data": {
+          "profile_name": "Profielnaam"
+        }
+      },
+      "entities": {
+        "title": "Auto en laadpaal",
+        "description": "Kies de Home Assistant-entiteiten. FordPass en Peblar zijn niet verplicht.",
+        "data": {
+          "soc_entity": "Auto SoC",
+          "plug_entity": "Auto aangesloten",
+          "charging_entity": "Auto laadstatus",
+          "target_entity": "Auto doelpercentage",
+          "charger_state_entity": "Laadpaalstatus",
+          "charger_switch_entity": "Laadpaal aan/uit",
+          "power_entity": "Laadvermogen",
+          "session_energy_entity": "Sessie-energie"
+        }
+      },
+      "energy": {
+        "title": "Energiebronnen",
+        "description": "Kies de tariefsensor en optioneel zonne-informatie.",
+        "data": {
+          "tariff_entity": "Tarief en forecast",
+          "solar_forecast_entity": "Zonneforecast",
+          "solar_now_entity": "Zonnevermogen nu"
+        }
+      },
+      "options": {
+        "title": "Laadinstellingen en AI",
+        "description": "AI is optioneel. Zonder AI werkt de lokale planner volledig.",
+        "data": {
+          "battery_capacity_kwh": "Accucapaciteit",
+          "charge_power_kw": "Laadvermogen",
+          "charge_efficiency": "Laadefficiëntie",
+          "target_soc_percent": "Standaard doelpercentage",
+          "ere_rate_eur_per_kwh": "ERE per kWh",
+          "ai_enabled": "AI gebruiken",
+          "ai_mode": "AI-modus",
+          "ai_api_key": "OpenAI API-key",
+          "ai_model": "OpenAI-model"
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "EV Smart Charge Planner opties",
+        "description": "Wijzig laadinstellingen of AI. De API-key wordt nooit als sensorwaarde gepubliceerd.",
+        "data": {
+          "battery_capacity_kwh": "Accucapaciteit",
+          "charge_power_kw": "Laadvermogen",
+          "charge_efficiency": "Laadefficiëntie",
+          "target_soc_percent": "Standaard doelpercentage",
+          "ere_rate_eur_per_kwh": "ERE per kWh",
+          "ai_enabled": "AI gebruiken",
+          "ai_mode": "AI-modus",
+          "ai_api_key": "OpenAI API-key",
+          "ai_model": "OpenAI-model"
+        }
+      }
+    }
+  }
+}
