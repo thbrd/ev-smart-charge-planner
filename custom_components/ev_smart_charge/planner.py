@@ -140,7 +140,8 @@ def build_candidates(snapshot: dict[str, Any], mode: str = "flex", deadline: str
     limit: datetime | None = None
     if deadline:
         try:
-            hh, mm = [int(part) for part in deadline.split(":", 1)]
+            parts = str(deadline).split(":")
+            hh, mm = int(parts[0]), int(parts[1])
             limit = now.replace(hour=hh, minute=mm, second=0, microsecond=0)
             if limit <= now:
                 limit += timedelta(days=1)
