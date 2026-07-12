@@ -31,6 +31,9 @@ from .const import (
     CONF_TARIFF_ENTITY,
     CONF_TARGET_ENTITY,
     CONF_TARGET_SOC,
+    CONF_TELEGRAM_CHAT_ID,
+    CONF_TELEGRAM_ENABLED,
+    CONF_TELEGRAM_SERVICE,
     DEFAULTS,
     DOMAIN,
 )
@@ -98,6 +101,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             vol.Optional(CONF_AI_MODE, default=DEFAULTS[CONF_AI_MODE]): vol.In(AI_MODES),
             vol.Optional(CONF_AI_API_KEY, default=""): api_key_selector(),
             vol.Optional(CONF_AI_MODEL, default=DEFAULTS[CONF_AI_MODEL]): str,
+            vol.Optional(CONF_TELEGRAM_ENABLED, default=DEFAULTS[CONF_TELEGRAM_ENABLED]): bool,
+            vol.Optional(CONF_TELEGRAM_SERVICE, default=DEFAULTS[CONF_TELEGRAM_SERVICE]): str,
+            vol.Optional(CONF_TELEGRAM_CHAT_ID, default=DEFAULTS[CONF_TELEGRAM_CHAT_ID]): str,
         })
         return self.async_show_form(step_id="options", data_schema=schema)
 
@@ -125,5 +131,8 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             vol.Optional(CONF_AI_MODE, default=values[CONF_AI_MODE]): vol.In(AI_MODES),
             vol.Optional(CONF_AI_API_KEY, default=values.get(CONF_AI_API_KEY, "")): api_key_selector(),
             vol.Optional(CONF_AI_MODEL, default=values[CONF_AI_MODEL]): str,
+            vol.Optional(CONF_TELEGRAM_ENABLED, default=values.get(CONF_TELEGRAM_ENABLED, DEFAULTS[CONF_TELEGRAM_ENABLED])): bool,
+            vol.Optional(CONF_TELEGRAM_SERVICE, default=values.get(CONF_TELEGRAM_SERVICE, DEFAULTS[CONF_TELEGRAM_SERVICE])): str,
+            vol.Optional(CONF_TELEGRAM_CHAT_ID, default=values.get(CONF_TELEGRAM_CHAT_ID, DEFAULTS[CONF_TELEGRAM_CHAT_ID])): str,
         })
         return self.async_show_form(step_id="init", data_schema=schema)

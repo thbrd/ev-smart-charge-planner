@@ -152,3 +152,74 @@ views:
             name: Efficiëntie
           - entity: number.ev_smart_charge_ere_rate_eur_per_kwh
             name: ERE per kWh
+
+      - type: entities
+        title: Telegram
+        show_header_toggle: false
+        entities:
+          - entity: switch.ev_smart_charge_telegram_enabled
+            name: Telegramberichten
+          - entity: text.ev_smart_charge_telegram_template_test
+            name: Testbericht
+          - entity: text.ev_smart_charge_telegram_template_plan
+            name: Planbericht
+          - entity: text.ev_smart_charge_telegram_template_start
+            name: Startbericht
+          - entity: text.ev_smart_charge_telegram_template_done
+            name: Klaarbericht
+          - entity: text.ev_smart_charge_telegram_template_stop
+            name: Stopbericht
+          - entity: text.ev_smart_charge_telegram_template_blocked
+            name: Veiligheidsbericht
+
+      - type: grid
+        title: Telegram testen
+        columns: 3
+        square: false
+        cards:
+          - type: button
+            name: Test
+            icon: mdi:telegram
+            tap_action:
+              action: call-service
+              service: ev_smart_charge.telegram_test
+          - type: button
+            name: Planbericht
+            icon: mdi:calendar-check
+            tap_action:
+              action: call-service
+              service: ev_smart_charge.telegram_send
+              service_data:
+                event: plan
+          - type: button
+            name: Startbericht
+            icon: mdi:play-circle
+            tap_action:
+              action: call-service
+              service: ev_smart_charge.telegram_send
+              service_data:
+                event: start
+          - type: button
+            name: Klaarbericht
+            icon: mdi:check-circle
+            tap_action:
+              action: call-service
+              service: ev_smart_charge.telegram_send
+              service_data:
+                event: done
+          - type: button
+            name: Stopbericht
+            icon: mdi:stop-circle
+            tap_action:
+              action: call-service
+              service: ev_smart_charge.telegram_send
+              service_data:
+                event: stop
+          - type: button
+            name: Veiligheidsbericht
+            icon: mdi:shield-alert
+            tap_action:
+              action: call-service
+              service: ev_smart_charge.telegram_send
+              service_data:
+                event: blocked

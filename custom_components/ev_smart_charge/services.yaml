@@ -69,3 +69,30 @@ reset:
 status:
   name: Refresh status
   description: Werk de EV-status bij.
+
+telegram_test:
+  name: Test Telegram
+  description: Stuur het ingestelde testbericht naar de ingestelde Telegram-chat.
+
+telegram_send:
+  name: Stuur Telegrambericht
+  description: Stuur een ingesteld Telegram-template of een eigen bericht.
+  fields:
+    event:
+      name: Berichttype
+      required: false
+      selector:
+        select:
+          options:
+            - test
+            - plan
+            - start
+            - done
+            - stop
+            - blocked
+    message:
+      name: Eigen bericht
+      description: Optioneel. Laat leeg om het ingestelde template te gebruiken.
+      required: false
+      selector:
+        text:

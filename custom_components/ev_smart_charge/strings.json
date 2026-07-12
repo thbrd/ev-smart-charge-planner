@@ -43,7 +43,10 @@
           "ai_enabled": "AI gebruiken",
           "ai_mode": "AI-modus",
           "ai_api_key": "OpenAI API-key",
-          "ai_model": "OpenAI-model"
+          "ai_model": "OpenAI-model",
+          "telegram_enabled": "Telegramberichten inschakelen",
+          "telegram_service": "Telegram-service",
+          "telegram_chat_id": "Telegram chat-ID"
         }
       }
     }
@@ -62,7 +65,10 @@
           "ai_enabled": "AI gebruiken",
           "ai_mode": "AI-modus",
           "ai_api_key": "OpenAI API-key",
-          "ai_model": "OpenAI-model"
+          "ai_model": "OpenAI-model",
+          "telegram_enabled": "Telegramberichten inschakelen",
+          "telegram_service": "Telegram-service",
+          "telegram_chat_id": "Telegram chat-ID"
         }
       }
     }

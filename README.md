@@ -6,6 +6,65 @@ Het project berekent wanneer een auto het beste kan laden op basis van dynamisch
 
 > Status: eerste HACS-MVP in ontwikkeling. De persoonlijke Node-RED-flow wordt niet gepubliceerd.
 
+## HACS-installatie
+
+De repository is ingericht als een HACS custom integration. Voor installatie via HACS:
+
+1. Open `HACS → Integraties`.
+2. Kies het menu rechtsboven en selecteer `Aangepaste repositories`.
+3. Voeg de URL van deze GitHub-repository toe.
+4. Kies categorie `Integration`.
+5. Installeer `EV Smart Charge Planner`.
+6. Herstart Home Assistant.
+7. Voeg de integratie toe via `Instellingen → Apparaten & diensten → Integratie toevoegen`.
+
+Voor lokaal testen kan de map `custom_components/ev_smart_charge` rechtstreeks naar `/config/custom_components/` worden gekopieerd.
+
+## Telegram instellen
+
+De integratie gebruikt de bestaande Telegram-integratie van Home Assistant. Er wordt geen bot-token in deze integratie opgeslagen.
+
+Open na installatie de opties van de integratie en vul in:
+
+- `Telegramberichten inschakelen`: aan;
+- `Telegram-service`: meestal `telegram_bot.send_message`;
+- `Telegram chat-ID`: bijvoorbeeld `-5222938603`.
+
+De integratie maakt daarna tekstentiteiten aan waarmee de templates vanuit het dashboard kunnen worden aangepast:
+
+```text
+text.ev_smart_charge_telegram_template_test
+text.ev_smart_charge_telegram_template_plan
+text.ev_smart_charge_telegram_template_start
+text.ev_smart_charge_telegram_template_done
+text.ev_smart_charge_telegram_template_stop
+text.ev_smart_charge_telegram_template_blocked
+```
+
+Beschikbare templatevelden zijn onder andere `{soc}`, `{target}`, `{plan_start}`, `{plan_end}`, `{plan_kwh}`, `{plan_cost}`, `{plan_ere}`, `{plan_net}`, `{session_kwh}`, `{session_cost}`, `{session_ere}` en `{session_net}`.
+
+Op het meegeleverde dashboard staan knoppen om ieder berichttype afzonderlijk te testen. De services zijn ook rechtstreeks te gebruiken:
+
+```yaml
+action: ev_smart_charge.telegram_test
+```
+
+```yaml
+action: ev_smart_charge.telegram_send
+data:
+  event: plan
+```
+
+De automatische meldingen zijn:
+
+- plan aangemaakt;
+- laden gestart;
+- laden klaar;
+- handmatig gestopt;
+- laden geblokkeerd door de veiligheidscontrole.
+
+Zet Telegram uit tijdens het testen met de schakelaar als je geen automatische meldingen wilt ontvangen.
+
 ## HACS-MVP
 
 De eerste integratie staat onder `custom_components/ev_smart_charge/` en bevat:
@@ -36,7 +95,7 @@ De Node-RED-export uit de persoonlijke installatie hoort niet bij deze installat
 
 - De tariefparser ondersteunt gangbare forecast-attributen; de exacte Zonneplan-attribuutstructuur moet nog met een echte Home Assistant-export worden gevalideerd.
 - Sessieprijzen worden in deze eerste versie proportioneel uit het gekozen plan berekend. Exacte energie-toewijzing per werkelijk prijsblok volgt in een volgende versie.
-- Telegram-notificaties zijn nog niet ingebouwd; Home Assistant-services kunnen wel al vanuit een Telegram-automatisering worden aangeroepen.
+- Telegram-notificaties gebruiken de bestaande Home Assistant Telegram-service. De service, chat-ID en berichttemplates zijn instelbaar.
 - De actuele FordPass/Peblar target-select wordt nog niet automatisch gewijzigd door de MVP.
 - De integratie is lokaal gecompileerd en met pure planner-scenario's getest. Een volledige Home Assistant-testomgeving is nog nodig voor de eerste alpha-release.
 

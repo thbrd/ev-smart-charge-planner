@@ -31,7 +31,11 @@ from .const import (
     CONF_TARIFF_ENTITY,
     CONF_TARGET_ENTITY,
     CONF_TARGET_SOC,
+    CONF_TELEGRAM_CHAT_ID,
+    CONF_TELEGRAM_ENABLED,
+    CONF_TELEGRAM_SERVICE,
     DEFAULTS,
+    TELEGRAM_TEMPLATE_KEYS,
 )
 from .history import SessionHistory
 from .planner import make_plan, number
@@ -59,12 +63,15 @@ class EVSmartChargeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.options = {**DEFAULTS, **entry.data, **entry.options}
         self.history = SessionHistory(hass, entry.entry_id)
         self._session: dict[str, Any] | None = None
+        self._last_session: dict[str, Any] | None = None
         self._last_ai_reason = ""
         super().__init__(hass, logger=_LOGGER, name="EV Smart Charge Planner", update_interval=timedelta(seconds=30))
 
     async def async_initialize(self) -> None:
         await self.history.async_load()
         self._session = self.history.active_session
+        if self.history.sessions:
+            self._last_session = self.history.sessions[-1]
         if self.history.plan:
             self.data = {"plan": self.history.plan}
         await self.async_refresh()
@@ -73,6 +80,10 @@ class EVSmartChargeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.options = {**self.options, **values}
         self.hass.config_entries.async_update_entry(self.entry, options=self.options)
         self.async_set_updated_data(self.data)
+
+    def async_update_options_from_entry(self) -> None:
+        self.options = {**DEFAULTS, **self.entry.data, **self.entry.options}
+        self.async_set_updated_data(self.data or {})
 
     def snapshot(self) -> dict[str, Any]:
         config = self.options
@@ -131,7 +142,75 @@ class EVSmartChargeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             await self.history.async_save_state(plan, self._session)
             self.data = {**(self.data or {}), "plan": plan, "snapshot": snapshot, "aggregates": self.history.aggregates()}
             self.async_set_updated_data(self.data)
+            await self.async_send_telegram("plan")
         return plan
+
+    class _TelegramValues(dict):
+        def __missing__(self, key):
+            return "—"
+
+    def _telegram_values(self) -> dict[str, str]:
+        data = self.data or {}
+        snapshot = data.get("snapshot") or self.snapshot()
+        ev = snapshot.get("ev", {})
+        charger = snapshot.get("charger", {})
+        settings = snapshot.get("settings", {})
+        plan = data.get("plan") or {}
+        selected = plan.get("selected") or {}
+        session = data.get("session") or self._last_session or {}
+
+        def value(source: dict[str, Any], key: str, fallback: Any = "—") -> str:
+            raw = source.get(key, fallback)
+            if raw is None or raw == "":
+                raw = fallback
+            if isinstance(raw, float):
+                return f"{raw:.2f}"
+            return str(raw)
+
+        return {
+            "status": value(plan, "status", "idle"),
+            "soc": value(ev, "soc_percent"),
+            "target": value(plan, "target_soc_percent", settings.get("target_soc_percent", 95)),
+            "charger_state": value(charger, "state"),
+            "plan_start": value(selected, "start_at"),
+            "plan_end": value(selected, "end_at"),
+            "plan_kwh": value(selected, "kwh", 0),
+            "plan_cost": value(selected, "cost_eur", 0),
+            "plan_ere": value(selected, "ere_eur", 0),
+            "plan_net": value(selected, "net_eur", 0),
+            "session_kwh": value(session, "kwh", 0),
+            "session_cost": value(session, "cost", 0),
+            "session_ere": value(session, "ere", 0),
+            "session_net": value(session, "net", 0),
+        }
+
+    async def async_send_telegram(self, event: str = "test", override_message: str | None = None) -> bool:
+        if not self.options.get(CONF_TELEGRAM_ENABLED):
+            return False
+        service = str(self.options.get(CONF_TELEGRAM_SERVICE, "")).strip()
+        chat_id = str(self.options.get(CONF_TELEGRAM_CHAT_ID, "")).strip()
+        if "." not in service or not chat_id:
+            _LOGGER.warning("Telegram is enabled but service or chat ID is missing")
+            return False
+        template_key = TELEGRAM_TEMPLATE_KEYS.get(event, TELEGRAM_TEMPLATE_KEYS["test"])
+        template = override_message if override_message is not None else str(self.options.get(template_key, DEFAULTS[template_key]))
+        try:
+            message = template.format_map(self._TelegramValues(self._telegram_values()))
+        except ValueError:
+            _LOGGER.warning("Invalid Telegram template for event %s; sending it unchanged", event)
+            message = template
+        domain, service_name = service.split(".", 1)
+        service_data: dict[str, Any] = {"message": message}
+        if domain == "telegram_bot":
+            service_data["chat_id"] = chat_id
+        else:
+            service_data["target"] = chat_id
+        try:
+            await self.hass.services.async_call(domain, service_name, service_data, blocking=False)
+        except Exception as err:  # Telegram must never interrupt charging logic.
+            _LOGGER.warning("Telegram message could not be sent: %s", err)
+            return False
+        return True
 
     def _safe_to_start(self, snapshot: dict[str, Any]) -> bool:
         ev = snapshot["ev"]
@@ -184,12 +263,16 @@ class EVSmartChargeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     async def async_start(self) -> None:
         snapshot = self.snapshot()
         if not self._safe_to_start(snapshot):
+            await self.async_send_telegram("blocked")
             raise ValueError("Start geblokkeerd: auto of laadpaal is niet veilig aangesloten.")
         switch = self.options.get(CONF_CHARGER_SWITCH_ENTITY)
         await self.hass.services.async_call("switch", "turn_on", {"entity_id": switch}, blocking=True)
         self._session = {"started_at": datetime.now().astimezone().isoformat(), "baseline_kwh": snapshot["charger"].get("session_energy_kwh") or 0}
         self.history.active_session = self._session
         await self.history.async_save_state(self.history.plan, self._session)
+        self.data = {**(self.data or {}), "snapshot": snapshot, "session": self._live_session(snapshot)}
+        self.async_set_updated_data(self.data)
+        await self.async_send_telegram("start")
 
     async def async_stop(self, reason: str = "manual") -> None:
         switch = self.options.get(CONF_CHARGER_SWITCH_ENTITY)
@@ -206,16 +289,20 @@ class EVSmartChargeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         planned_kwh = float(selected.get("kwh", 0)) if selected else 0.0
         cost = min(1.0, kwh / planned_kwh) * float(selected.get("cost_eur", 0)) if selected and planned_kwh > 0 else 0.0
         ere = round(kwh * float(self.options.get(CONF_ERE_RATE, 0.12)), 2)
-        await self.history.async_add({"started_at": self._session["started_at"], "stopped_at": datetime.now().astimezone().isoformat(), "kwh": round(kwh, 3), "cost": round(cost, 2), "ere": ere, "net": round(cost - ere, 2), "reason": reason})
+        completed = {"started_at": self._session["started_at"], "stopped_at": datetime.now().astimezone().isoformat(), "kwh": round(kwh, 3), "cost": round(cost, 2), "ere": ere, "net": round(cost - ere, 2), "reason": reason}
+        await self.history.async_add(completed)
+        self._last_session = completed
         self._session = None
         self.history.plan = None
         self.history.active_session = None
         await self.history.async_save_state(None, None)
         if self.data:
+            self.data["snapshot"] = snapshot
             self.data["aggregates"] = self.history.aggregates()
             self.data["plan"] = None
             self.data["session"] = None
             self.async_set_updated_data(self.data)
+        await self.async_send_telegram("stop" if reason == "service_stop" else "done")
 
     async def async_reset(self) -> None:
         self._session = None
