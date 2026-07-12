@@ -2,9 +2,14 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import voluptuous as vol
+from homeassistant.components import frontend
+from homeassistant.components.http import StaticPathConfig
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.helpers.typing import ConfigType
 
 from .const import (
     DOMAIN,
@@ -23,6 +28,30 @@ from .coordinator import EVSmartChargeCoordinator
 
 SERVICE_SCHEMA = vol.Schema({vol.Optional("mode", default="flex"): vol.In(["today", "flex", "deadline"]), vol.Optional("deadline"): str, vol.Optional("target_soc"): vol.Coerce(float)})
 TELEGRAM_SCHEMA = vol.Schema({vol.Optional("event", default="test"): vol.In(TELEGRAM_EVENTS), vol.Optional("message"): str})
+PANEL_URL = "/ev_smart_charge_panel"
+PANEL_PATH = "ev-smart-charge-panel"
+PANEL_FRONTEND_URL = "ev-smart-charge"
+
+
+async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+    """Register the local sidebar panel and its static frontend module."""
+    panel_dir = Path(__file__).parent / "frontend"
+    await hass.http.async_register_static_paths([StaticPathConfig(PANEL_URL, str(panel_dir), False)])
+    frontend.async_register_built_in_panel(
+        hass,
+        "custom",
+        sidebar_title="EV Smart Charge",
+        sidebar_icon="mdi:ev-station",
+        frontend_url_path=PANEL_FRONTEND_URL,
+        config={
+            "_panel_custom": {
+                "name": PANEL_PATH,
+                "module_url": f"{PANEL_URL}/{PANEL_PATH}.js",
+                "embed_iframe": False,
+            }
+        },
+    )
+    return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

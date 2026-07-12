@@ -17,6 +17,7 @@ De repository is ingericht als een HACS custom integration. Voor installatie via
 5. Installeer `EV Smart Charge Planner`.
 6. Herstart Home Assistant.
 7. Voeg de integratie toe via `Instellingen → Apparaten & diensten → Integratie toevoegen`.
+8. Open daarna links in de sidebar `EV Smart Charge`.
 
 Voor lokaal testen kan de map `custom_components/ev_smart_charge` rechtstreeks naar `/config/custom_components/` worden gekopieerd.
 
@@ -74,17 +75,18 @@ Het voorbeeld-dashboard staat in [`dashboards/ev-smart-charge-dashboard.yaml`](d
 3. Kopieer de inhoud van het YAML-bestand naar de dashboardconfiguratie.
 4. Controleer na opslaan of de entiteiten van de integratie dezelfde object-ID's hebben.
 
-Het dashboard bevat laadplanning, sessiegegevens, dag-, maand- en jaaroverzichten, Telegraminstellingen en afzonderlijke Telegram-testknoppen.
+Het sidebar-panel bevat laadplanning, sessiegegevens, dag-, maand- en jaaroverzichten, Telegraminstellingen en afzonderlijke Telegram-testknoppen. De sensorverbindingen en gevoelige opties blijven beschikbaar via de native Home Assistant-integratie-instellingen.
 
 ## Testprocedure
 
 Test eerst zonder de auto daadwerkelijk te laden:
 
 1. Zet AI uit.
-2. Maak via het dashboard een flexibel plan.
-3. Controleer starttijd, eindtijd, benodigde kWh, kosten, ERE en netto.
-4. Klik op `Telegram test`.
-5. Test daarna elk afzonderlijk berichttype.
+2. Open het sidebar-panel `EV Smart Charge`.
+3. Maak via het panel een flexibel plan.
+4. Controleer starttijd, eindtijd, benodigde kWh, kosten, ERE en netto.
+5. Klik op `Telegram test`.
+6. Test daarna elk afzonderlijk berichttype.
 
 Test vervolgens de veiligheidscontrole met de auto niet aangesloten. De actie `ev_smart_charge.start` moet dan worden geblokkeerd en de laadpaalswitch mag niet aan gaan.
 
@@ -109,7 +111,8 @@ De eerste integratie staat onder `custom_components/ev_smart_charge/` en bevat:
 - persistent plan en sessiehistorie;
 - dag-, maand- en jaaraggregaten;
 - Home Assistant-services voor plannen, simuleren, starten, stoppen en resetten;
-- instelbare laadparameters als integratie-entiteiten in plaats van handmatige helpers.
+- instelbare laadparameters als integratie-entiteiten in plaats van handmatige helpers;
+- een eigen sidebar-panel voor bediening, instellingen en Telegramtests.
 
 De Node-RED-export uit de persoonlijke installatie hoort niet bij deze installatie-instructie.
 
@@ -264,10 +267,11 @@ De Node-RED-versie en de HACS-integratie moeten dezelfde onderdelen delen:
 - [x] HACS-publicatie voorbereiden
 - [x] Standaard Lovelace-dashboard maken
 - [x] Telegram-configuratie en testberichten toevoegen
+- [x] Sidebar-panel voor dagelijkse bediening maken
 - [ ] Exacte kosten per werkelijk prijsblok toevoegen
 - [ ] Uitgebreide Home Assistant integration tests toevoegen
 
-Het standaard Lovelace-dashboard staat in `dashboards/ev-smart-charge-dashboard.yaml`. Het gebruikt alleen standaard Home Assistant-kaarten.
+Een optioneel YAML-dashboard staat in `dashboards/ev-smart-charge-dashboard.yaml`. De aanbevolen dagelijkse interface is het ingebouwde sidebar-panel `EV Smart Charge`.
 
 ## Bijdragen
 
