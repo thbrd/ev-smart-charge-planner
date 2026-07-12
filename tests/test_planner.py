@@ -33,3 +33,9 @@ def test_finished_when_target_reached():
     data["ev"]["soc_percent"] = 80
     data["settings"]["target_soc_percent"] = 75
     assert make_plan(data)["status"] == "finished"
+
+
+if __name__ == "__main__":
+    test_local_planner_selects_cheapest_valid_window()
+    test_finished_when_target_reached()
+    print("planner tests: PASS")
