@@ -36,6 +36,12 @@ def _state_text(state: Any) -> str:
     return " ".join(parts).lower()
 
 
+def _is_owned_entity(entity_id: str) -> bool:
+    """Keep this integration's own entities out of source discovery."""
+    object_id = entity_id.split(".", 1)[-1].lower()
+    return object_id.startswith("ev_smart_charge_") or object_id.startswith("ev_smart_charge_planner_")
+
+
 def discover_entities(hass: Any, limit: int | None = 8) -> dict[str, list[dict[str, Any]]]:
     """Return ranked entity candidates grouped by configuration field."""
     states = hass.states.async_all() if hasattr(hass.states, "async_all") else list(hass.states)
@@ -45,6 +51,8 @@ def discover_entities(hass: Any, limit: int | None = 8) -> dict[str, list[dict[s
         for state in states:
             entity_id = getattr(state, "entity_id", "")
             if not entity_id or entity_id.split(".", 1)[0] not in domains:
+                continue
+            if _is_owned_entity(entity_id):
                 continue
             text = _state_text(state)
             attributes = getattr(state, "attributes", {}) or {}

@@ -53,7 +53,17 @@ def test_discovery_can_return_all_matching_entities_for_sidebar_picker():
     }
 
 
+def test_discovery_ignores_planner_entities_as_sources():
+    hass = Hass([
+        State("sensor.ev_smart_charge_soc", "EV Smart Charge SoC", "%"),
+        State("sensor.fordpass_soc", "FordPass EV SoC", "%"),
+    ])
+    candidates = discovery.discover_entities(hass, limit=None)["soc_entity"]
+    assert [item["entity_id"] for item in candidates] == ["sensor.fordpass_soc"]
+
+
 if __name__ == "__main__":
     test_discovery_prefers_tariff_sensor_with_forecast()
     test_discovery_can_return_all_matching_entities_for_sidebar_picker()
+    test_discovery_ignores_planner_entities_as_sources()
     print("discovery tests: PASS")

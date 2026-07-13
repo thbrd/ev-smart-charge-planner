@@ -99,10 +99,12 @@ class EVSmartChargeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._last_session: dict[str, Any] | None = None
         self._last_ai_reason = ""
         self.discovery_candidates: dict[str, list[dict[str, Any]]] = {}
+        self.auto_linked_entities: list[str] = []
         super().__init__(hass, logger=_LOGGER, name="EV Smart Charge Planner", update_interval=timedelta(seconds=30))
 
     async def async_initialize(self) -> None:
         self.discovery_candidates = discover_entities(self.hass, limit=None)
+        self._auto_link_missing_entities()
         await self.history.async_load()
         self._session = self.history.active_session
         if self.history.sessions:
@@ -110,6 +112,33 @@ class EVSmartChargeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if self.history.plan:
             self.data = {"plan": self.history.plan}
         await self.async_refresh()
+
+    def _auto_link_missing_entities(self) -> bool:
+        """Persist best source matches for legacy or empty config entries.
+
+        Only empty fields are filled. Existing user choices are never replaced;
+        optional fields remain empty when no matching source exists.
+        """
+        data = dict(self.entry.data)
+        linked: list[str] = []
+        for key in SETUP_ENTITY_KEYS:
+            if data.get(key):
+                continue
+            candidate = (self.discovery_candidates.get(key) or [None])[0]
+            entity_id = candidate.get("entity_id") if candidate else None
+            if not entity_id:
+                continue
+            data[key] = entity_id
+            linked.append(key)
+        if not linked:
+            self.auto_linked_entities = []
+            return False
+        options = without_entity_options(self.entry.options)
+        self.hass.config_entries.async_update_entry(self.entry, data=data, options=options)
+        self.options = merged_entry_values(data, options)
+        self.auto_linked_entities = linked
+        _LOGGER.info("Auto-linked EV Smart Charge sources: %s", ", ".join(linked))
+        return True
 
     def async_set_options(self, values: dict[str, Any]) -> None:
         self.options = {**self.options, **values}
@@ -194,6 +223,7 @@ class EVSmartChargeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     async def async_test_connection(self) -> dict[str, Any]:
         """Validate configured sources without touching the charger."""
         self.discovery_candidates = discover_entities(self.hass, limit=None)
+        self._auto_link_missing_entities()
         snapshot = self.snapshot()
         checks = self.connection_checks(snapshot)
         tariff_count = len(snapshot.get("tariff_slots") or [])

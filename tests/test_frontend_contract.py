@@ -26,7 +26,7 @@ def test_panel_resolves_only_known_ev_entity_names():
 
 def test_panel_cache_version_is_bumped_with_frontend_contract():
     source = INIT.read_text()
-    assert 'PANEL_CACHE_VERSION = "0.5.7"' in source
+    assert 'PANEL_CACHE_VERSION = "0.5.8"' in source
     assert "module_url" in source
 
 

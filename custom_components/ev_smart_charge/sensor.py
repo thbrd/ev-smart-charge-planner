@@ -211,6 +211,7 @@ class EVSensor(CoordinatorEntity[EVSmartChargeCoordinator], SensorEntity):
                 "configuration": configuration,
                 "candidates": self.coordinator.discovery_candidates,
                 "checks": self.coordinator.connection_checks(snapshot),
+                "auto_linked": self.coordinator.auto_linked_entities,
             }
         if self.key in ("connection_test_status", "connection_test_reason"):
             return (data.get("connection_test") or {}).get("checks", {})
