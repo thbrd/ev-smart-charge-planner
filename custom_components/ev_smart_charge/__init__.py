@@ -40,6 +40,7 @@ SETUP_SCHEMA = vol.Schema({vol.Optional(key): str for key in (*SETUP_ENTITY_KEYS
 PANEL_URL = "/ev_smart_charge_panel"
 PANEL_PATH = "ev-smart-charge-panel"
 PANEL_FRONTEND_URL = "ev-smart-charge"
+PANEL_CACHE_VERSION = "0.5.2"
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
@@ -55,7 +56,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         config={
             "_panel_custom": {
                 "name": PANEL_PATH,
-                "module_url": f"{PANEL_URL}/{PANEL_PATH}.js",
+                "module_url": f"{PANEL_URL}/{PANEL_PATH}.js?v={PANEL_CACHE_VERSION}",
                 "embed_iframe": False,
             }
         },
@@ -120,7 +121,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             )
 
         async def update_setup(call: ServiceCall) -> None:
-            coordinator_for_call().async_update_setup(dict(call.data))
+            active = coordinator_for_call()
+            active.async_update_setup(dict(call.data))
+            await active.async_refresh()
 
         async def test_connection(call: ServiceCall) -> None:
             await coordinator_for_call().async_test_connection()
