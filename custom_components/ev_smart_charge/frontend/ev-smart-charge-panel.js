@@ -321,7 +321,11 @@ class EvSmartChargePanel extends HTMLElement {
     const setup = this._attributes("sensor", "setup_status");
     const configuration = setup.configuration || {};
     const checks = setup.checks || {};
-    const signature = JSON.stringify({ configuration, candidates: setup.candidates || {}, checks });
+    // Live check values change every polling cycle. They must not rebuild the
+    // form, otherwise a selected dropdown value can be lost before Save is
+    // pressed. Rebuild only when the available options or saved connections
+    // actually change.
+    const signature = JSON.stringify({ configuration, candidates: setup.candidates || {} });
     if (signature !== this._setupSignature) {
       const fields = this.shadowRoot.querySelector("#setup-fields");
       if (fields) fields.innerHTML = this._setupFields();

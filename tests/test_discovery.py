@@ -41,6 +41,19 @@ def test_discovery_prefers_tariff_sensor_with_forecast():
     assert candidates[0]["entity_id"] == "sensor.zonneplan_current_electricity_tariff"
 
 
+def test_discovery_can_return_all_matching_entities_for_sidebar_picker():
+    hass = Hass([
+        State("sensor.ev_soc_a", "EV SoC", "%"),
+        State("sensor.ev_soc_b", "EV SoC backup", "%"),
+    ])
+    candidates = discovery.discover_entities(hass, limit=None)["soc_entity"]
+    assert {item["entity_id"] for item in candidates} == {
+        "sensor.ev_soc_a",
+        "sensor.ev_soc_b",
+    }
+
+
 if __name__ == "__main__":
     test_discovery_prefers_tariff_sensor_with_forecast()
+    test_discovery_can_return_all_matching_entities_for_sidebar_picker()
     print("discovery tests: PASS")

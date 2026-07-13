@@ -36,7 +36,7 @@ def _state_text(state: Any) -> str:
     return " ".join(parts).lower()
 
 
-def discover_entities(hass: Any, limit: int = 8) -> dict[str, list[dict[str, Any]]]:
+def discover_entities(hass: Any, limit: int | None = 8) -> dict[str, list[dict[str, Any]]]:
     """Return ranked entity candidates grouped by configuration field."""
     states = hass.states.async_all() if hasattr(hass.states, "async_all") else list(hass.states)
     result: dict[str, list[dict[str, Any]]] = {}
@@ -65,7 +65,7 @@ def discover_entities(hass: Any, limit: int = 8) -> dict[str, list[dict[str, Any
                 "reason": _reason(field, attributes, unit),
             })
         candidates.sort(key=lambda item: (-item["score"], item["entity_id"]))
-        result[field] = candidates[:limit]
+        result[field] = candidates if limit is None else candidates[:limit]
     return result
 
 

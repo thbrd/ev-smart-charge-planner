@@ -42,6 +42,11 @@ from .const import (
 )
 from .history import SessionHistory
 from .discovery import discover_entities
+from .config_helpers import (
+    canonical_entry_storage,
+    merged_entry_values,
+    without_entity_options,
+)
 from .planner import make_plan, normalize_slots, number
 
 _LOGGER = logging.getLogger(__name__)
@@ -85,7 +90,10 @@ def attributes(hass: HomeAssistant, entity_id: str | None) -> dict[str, Any]:
 class EVSmartChargeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     def __init__(self, hass: HomeAssistant, entry: Any) -> None:
         self.entry = entry
-        self.options = {**DEFAULTS, **entry.data, **entry.options}
+        data, options = canonical_entry_storage(entry.data, entry.options)
+        if data != entry.data or options != entry.options:
+            hass.config_entries.async_update_entry(entry, data=data, options=options)
+        self.options = merged_entry_values(data, options)
         self.history = SessionHistory(hass, entry.entry_id)
         self._session: dict[str, Any] | None = None
         self._last_session: dict[str, Any] | None = None
@@ -94,7 +102,7 @@ class EVSmartChargeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         super().__init__(hass, logger=_LOGGER, name="EV Smart Charge Planner", update_interval=timedelta(seconds=30))
 
     async def async_initialize(self) -> None:
-        self.discovery_candidates = discover_entities(self.hass)
+        self.discovery_candidates = discover_entities(self.hass, limit=None)
         await self.history.async_load()
         self._session = self.history.active_session
         if self.history.sessions:
@@ -109,7 +117,7 @@ class EVSmartChargeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.async_set_updated_data(self.data)
 
     def async_update_options_from_entry(self) -> None:
-        self.options = {**DEFAULTS, **self.entry.data, **self.entry.options}
+        self.options = merged_entry_values(self.entry.data, self.entry.options)
         self.async_set_updated_data(self.data or {})
 
     def connection_checks(self, snapshot: dict[str, Any] | None = None) -> dict[str, dict[str, Any]]:
@@ -166,7 +174,7 @@ class EVSmartChargeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             elif key not in required:
                 data.pop(key, None)
         options = {
-            **self.entry.options,
+            **without_entity_options(self.entry.options),
             **{
                 key: data[key]
                 for key in (CONF_TARIFF_PROVIDER, CONF_CONTROL_MODE)
@@ -174,7 +182,7 @@ class EVSmartChargeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             },
         }
         self.hass.config_entries.async_update_entry(self.entry, data=data, options=options)
-        self.options = {**DEFAULTS, **data, **options}
+        self.options = merged_entry_values(data, options)
         snapshot = self.snapshot()
         self.async_set_updated_data({
             **(self.data or {}),
@@ -185,7 +193,7 @@ class EVSmartChargeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     async def async_test_connection(self) -> dict[str, Any]:
         """Validate configured sources without touching the charger."""
-        self.discovery_candidates = discover_entities(self.hass)
+        self.discovery_candidates = discover_entities(self.hass, limit=None)
         snapshot = self.snapshot()
         checks = self.connection_checks(snapshot)
         tariff_count = len(snapshot.get("tariff_slots") or [])

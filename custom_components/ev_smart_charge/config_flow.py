@@ -9,6 +9,10 @@ from homeassistant.core import callback
 from homeassistant.helpers import selector
 
 from .discovery import discover_entities
+from .config_helpers import (
+    canonical_entry_storage,
+    merged_entry_values,
+)
 from .const import (
     AI_MODES,
     CONTROL_MODES,
@@ -136,9 +140,10 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         entry = self.hass.config_entries.async_get_entry(self.context["entry_id"])
         if entry is None:
             return self.async_abort(reason="unknown_entry")
-        values = {**entry.data, **entry.options}
+        stored_data, stored_options = canonical_entry_storage(entry.data, entry.options)
+        values = merged_entry_values(stored_data, stored_options)
         if user_input is not None:
-            data = dict(entry.data)
+            data = dict(stored_data)
             for key in SETUP_ENTITY_KEYS:
                 if key not in user_input:
                     continue
@@ -152,7 +157,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data[CONF_TARIFF_PROVIDER] = provider
             data[CONF_CONTROL_MODE] = control_mode
             options = {
-                **entry.options,
+                **stored_options,
                 CONF_TARIFF_PROVIDER: provider,
                 CONF_CONTROL_MODE: control_mode,
             }
