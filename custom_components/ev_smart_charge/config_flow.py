@@ -40,6 +40,7 @@ from .const import (
     CONF_TELEGRAM_SERVICE,
     DEFAULTS,
     DOMAIN,
+    SETUP_ENTITY_KEYS,
     TARIFF_PROVIDERS,
 )
 
@@ -129,6 +130,60 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             vol.Optional(CONF_TELEGRAM_CHAT_ID, default=DEFAULTS[CONF_TELEGRAM_CHAT_ID]): str,
         })
         return self.async_show_form(step_id="options", data_schema=schema)
+
+    async def async_step_reconfigure(self, user_input=None):
+        """Allow changing the connected car, charger and energy entities later."""
+        entry = self.hass.config_entries.async_get_entry(self.context["entry_id"])
+        if entry is None:
+            return self.async_abort(reason="unknown_entry")
+        values = {**entry.data, **entry.options}
+        if user_input is not None:
+            data = dict(entry.data)
+            for key in SETUP_ENTITY_KEYS:
+                if key not in user_input:
+                    continue
+                value = str(user_input[key] or "").strip()
+                if value:
+                    data[key] = value
+                else:
+                    data.pop(key, None)
+            provider = str(user_input.get(CONF_TARIFF_PROVIDER, values.get(CONF_TARIFF_PROVIDER, DEFAULTS[CONF_TARIFF_PROVIDER]))).strip()
+            control_mode = str(user_input.get(CONF_CONTROL_MODE, values.get(CONF_CONTROL_MODE, DEFAULTS[CONF_CONTROL_MODE]))).strip()
+            data[CONF_TARIFF_PROVIDER] = provider
+            data[CONF_CONTROL_MODE] = control_mode
+            options = {
+                **entry.options,
+                CONF_TARIFF_PROVIDER: provider,
+                CONF_CONTROL_MODE: control_mode,
+            }
+            self.hass.config_entries.async_update_entry(entry, data=data, options=options)
+            return self.async_abort(reason="reconfigure_successful")
+
+        suggestions = discover_entities(self.hass)
+
+        def field(key: str, domain: str | list[str], required: bool = False):
+            current = values.get(key)
+            default = current or (suggestions.get(key) or [{}])[0].get("entity_id")
+            if required:
+                return vol.Required(key, default=default) if default else vol.Required(key)
+            return vol.Optional(key, default=default) if default else vol.Optional(key)
+
+        schema = vol.Schema({
+            field(CONF_SOC_ENTITY, "sensor", True): entity("sensor"),
+            field(CONF_PLUG_ENTITY, ["binary_sensor", "sensor"], True): entity(["binary_sensor", "sensor"]),
+            field(CONF_CHARGING_ENTITY, ["binary_sensor", "sensor"]): entity(["binary_sensor", "sensor"]),
+            field(CONF_TARGET_ENTITY, "select"): entity("select"),
+            field(CONF_CHARGER_STATE_ENTITY, ["sensor", "binary_sensor"], True): entity(["sensor", "binary_sensor"]),
+            field(CONF_CHARGER_SWITCH_ENTITY, "switch", True): entity("switch"),
+            field(CONF_POWER_ENTITY, "sensor"): entity("sensor"),
+            field(CONF_SESSION_ENERGY_ENTITY, "sensor"): entity("sensor"),
+            field(CONF_TARIFF_ENTITY, "sensor", True): entity("sensor"),
+            vol.Required(CONF_TARIFF_PROVIDER, default=values.get(CONF_TARIFF_PROVIDER, DEFAULTS[CONF_TARIFF_PROVIDER])): vol.In(TARIFF_PROVIDERS),
+            field(CONF_SOLAR_FORECAST_ENTITY, "sensor"): entity("sensor"),
+            field(CONF_SOLAR_NOW_ENTITY, "sensor"): entity("sensor"),
+            vol.Required(CONF_CONTROL_MODE, default=values.get(CONF_CONTROL_MODE, DEFAULTS[CONF_CONTROL_MODE])): vol.In(CONTROL_MODES),
+        })
+        return self.async_show_form(step_id="reconfigure", data_schema=schema)
 
     @staticmethod
     @callback

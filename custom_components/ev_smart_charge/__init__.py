@@ -40,7 +40,7 @@ SETUP_SCHEMA = vol.Schema({vol.Optional(key): str for key in (*SETUP_ENTITY_KEYS
 PANEL_URL = "/ev_smart_charge_panel"
 PANEL_PATH = "ev-smart-charge-panel"
 PANEL_FRONTEND_URL = "ev-smart-charge"
-PANEL_CACHE_VERSION = "0.5.2"
+PANEL_CACHE_VERSION = "0.5.3"
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:

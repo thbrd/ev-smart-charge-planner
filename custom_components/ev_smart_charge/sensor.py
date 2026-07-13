@@ -104,8 +104,7 @@ class EVSensor(CoordinatorEntity[EVSmartChargeCoordinator], SensorEntity):
         connection_test = data.get("connection_test") or {}
         configuration = snapshot.get("configuration", {})
         if self.key == "setup_status":
-            required = ("soc_entity", "plug_entity", "charger_state_entity", "charger_switch_entity", "tariff_entity")
-            return "ready" if all(configuration.get(key) for key in required) else "needs_configuration"
+            return self.coordinator.setup_status()
         if self.key == "connection_test_status":
             return connection_test.get("status", "not_run")
         if self.key == "connection_test_reason":
@@ -198,6 +197,7 @@ class EVSensor(CoordinatorEntity[EVSmartChargeCoordinator], SensorEntity):
             return {
                 "configuration": snapshot.get("configuration", {}),
                 "candidates": self.coordinator.discovery_candidates,
+                "checks": (data.get("connection_checks") or self.coordinator.connection_checks(snapshot)),
             }
         if self.key in ("connection_test_status", "connection_test_reason"):
             return (data.get("connection_test") or {}).get("checks", {})

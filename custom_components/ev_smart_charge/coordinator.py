@@ -46,6 +46,27 @@ from .planner import make_plan, normalize_slots, number
 
 _LOGGER = logging.getLogger(__name__)
 
+SETUP_LABELS = {
+    CONF_SOC_ENTITY: "Auto SoC",
+    CONF_PLUG_ENTITY: "Auto aangesloten",
+    CONF_CHARGING_ENTITY: "Auto laadstatus",
+    CONF_TARGET_ENTITY: "Auto doelpercentage",
+    CONF_CHARGER_STATE_ENTITY: "Laadpaalstatus",
+    CONF_CHARGER_SWITCH_ENTITY: "Laadpaal aan/uit",
+    CONF_POWER_ENTITY: "Laadvermogen",
+    CONF_SESSION_ENERGY_ENTITY: "Sessie-energie",
+    CONF_TARIFF_ENTITY: "Tarief + forecast",
+    CONF_SOLAR_FORECAST_ENTITY: "Zonneforecast",
+    CONF_SOLAR_NOW_ENTITY: "Zonnevermogen nu",
+}
+REQUIRED_SETUP_KEYS = {
+    CONF_SOC_ENTITY,
+    CONF_PLUG_ENTITY,
+    CONF_CHARGER_STATE_ENTITY,
+    CONF_CHARGER_SWITCH_ENTITY,
+    CONF_TARIFF_ENTITY,
+}
+
 
 def state_value(hass: HomeAssistant, entity_id: str | None) -> Any:
     if not entity_id:
@@ -91,6 +112,46 @@ class EVSmartChargeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.options = {**DEFAULTS, **self.entry.data, **self.entry.options}
         self.async_set_updated_data(self.data or {})
 
+    def connection_checks(self, snapshot: dict[str, Any] | None = None) -> dict[str, dict[str, Any]]:
+        """Return a live, human-readable status for every configured source."""
+        snapshot = snapshot or self.snapshot()
+        tariff_slots = len(snapshot.get("tariff_slots") or [])
+        checks: dict[str, dict[str, Any]] = {}
+        for key in SETUP_ENTITY_KEYS:
+            entity_id = self.options.get(key)
+            required = key in REQUIRED_SETUP_KEYS
+            base = {"label": SETUP_LABELS[key], "entity_id": entity_id, "required": required}
+            if not entity_id:
+                checks[key] = {
+                    **base,
+                    "status": "missing" if required else "optional",
+                    "detail": "Niet gekoppeld" if required else "Niet gekoppeld (optioneel)",
+                }
+                continue
+            state = self.hass.states.get(entity_id)
+            if state is None:
+                checks[key] = {**base, "status": "missing", "detail": "Entity bestaat niet"}
+                continue
+            value = state.state
+            if value in ("unknown", "unavailable"):
+                checks[key] = {**base, "status": "unavailable", "value": value, "detail": f"Geen bruikbare waarde ({value})"}
+                continue
+            status = "ok"
+            detail = f"Beschikbaar: {value}"
+            if key == CONF_TARIFF_ENTITY and not tariff_slots:
+                status = "warning"
+                detail = "Entity beschikbaar, maar geen forecastblokken gevonden"
+            checks[key] = {**base, "status": status, "value": value, "detail": detail}
+        return checks
+
+    def setup_status(self, checks: dict[str, dict[str, Any]] | None = None) -> str:
+        checks = checks or (self.data or {}).get("connection_checks") or self.connection_checks()
+        if any(checks.get(key, {}).get("status") == "missing" for key in REQUIRED_SETUP_KEYS):
+            return "needs_configuration"
+        if any(checks.get(key, {}).get("status") != "ok" for key in REQUIRED_SETUP_KEYS):
+            return "warning"
+        return "ready"
+
     def async_update_setup(self, values: dict[str, Any]) -> None:
         """Persist wizard-selected entities and safe control settings."""
         updates = {key: value for key, value in values.items() if value is not None}
@@ -104,42 +165,39 @@ class EVSmartChargeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 data[key] = value
             elif key not in required:
                 data.pop(key, None)
-        self.hass.config_entries.async_update_entry(self.entry, data=data)
-        self.options = {**DEFAULTS, **data, **self.entry.options}
+        options = {
+            **self.entry.options,
+            **{
+                key: data[key]
+                for key in (CONF_TARIFF_PROVIDER, CONF_CONTROL_MODE)
+                if key in data
+            },
+        }
+        self.hass.config_entries.async_update_entry(self.entry, data=data, options=options)
+        self.options = {**DEFAULTS, **data, **options}
+        snapshot = self.snapshot()
         self.async_set_updated_data({
             **(self.data or {}),
-            "snapshot": self.snapshot(),
+            "snapshot": snapshot,
+            "connection_checks": self.connection_checks(snapshot),
             "aggregates": self.history.aggregates(),
         })
 
     async def async_test_connection(self) -> dict[str, Any]:
         """Validate configured sources without touching the charger."""
         self.discovery_candidates = discover_entities(self.hass)
-        checks: dict[str, dict[str, Any]] = {}
-        required = (CONF_SOC_ENTITY, CONF_PLUG_ENTITY, CONF_CHARGER_STATE_ENTITY, CONF_CHARGER_SWITCH_ENTITY, CONF_TARIFF_ENTITY)
-        for key in SETUP_ENTITY_KEYS:
-            entity_id = self.options.get(key)
-            if not entity_id:
-                checks[key] = {"status": "missing", "entity_id": None}
-                continue
-            state = self.hass.states.get(entity_id)
-            value = state.state if state else None
-            checks[key] = {
-                "status": "ok" if state and value not in ("unknown", "unavailable") else "unavailable",
-                "entity_id": entity_id,
-                "value": value,
-            }
         snapshot = self.snapshot()
+        checks = self.connection_checks(snapshot)
         tariff_count = len(snapshot.get("tariff_slots") or [])
-        if tariff_count == 0:
-            checks[CONF_TARIFF_ENTITY] = {**checks.get(CONF_TARIFF_ENTITY, {}), "status": "warning", "forecast_slots": 0}
-        failed = [key for key in required if checks.get(key, {}).get("status") != "ok"]
-        status = "ready" if not failed and tariff_count else "warning"
-        reason = "Alle vereiste bronnen en de tariefforecast zijn beschikbaar." if status == "ready" else (
-            "Ontbrekende of onbeschikbare bronnen: " + ", ".join(failed) if failed else "De tariefsensor heeft nog geen forecastblokken."
-        )
+        failed = [key for key in REQUIRED_SETUP_KEYS if checks.get(key, {}).get("status") != "ok"]
+        status = "ready" if not failed else "warning"
+        if status == "ready":
+            reason = "Alle vereiste bronnen en de tariefforecast zijn beschikbaar."
+        else:
+            labels = [SETUP_LABELS.get(key, key) for key in failed]
+            reason = "Controleer: " + ", ".join(labels)
         result = {"status": status, "reason": reason, "checks": checks, "tariff_slots": tariff_count}
-        self.data = {**(self.data or {}), "connection_test": result, "snapshot": snapshot}
+        self.data = {**(self.data or {}), "connection_test": result, "connection_checks": checks, "snapshot": snapshot}
         self.async_set_updated_data(self.data)
         return result
 
@@ -195,7 +253,7 @@ class EVSmartChargeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         try:
             snapshot = self.snapshot()
             data = self.data or {}
-            data = {**data, "snapshot": snapshot, "session": self._live_session(snapshot), "aggregates": self.history.aggregates()}
+            data = {**data, "snapshot": snapshot, "connection_checks": self.connection_checks(snapshot), "session": self._live_session(snapshot), "aggregates": self.history.aggregates()}
             await self._async_execute_if_due(data)
             return data
         except Exception as err:
