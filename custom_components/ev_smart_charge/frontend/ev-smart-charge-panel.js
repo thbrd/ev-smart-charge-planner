@@ -97,7 +97,14 @@ class EvSmartChargePanel extends HTMLElement {
 
   _setupFields() {
     const setup = this._attributes("sensor", "setup_status");
-    const configuration = setup.configuration || {};
+    // The live checks also carry the entity_id. Use them as a fallback so
+    // the wizard remains usable while HA is refreshing config-entry attrs.
+    const checkConfiguration = Object.fromEntries(
+      Object.entries(setup.checks || {})
+        .filter(([, check]) => check && check.entity_id)
+        .map(([key, check]) => [key, check.entity_id])
+    );
+    const configuration = { ...checkConfiguration, ...(setup.configuration || {}) };
     const labels = {
       soc_entity: "Auto SoC — accupercentage",
       plug_entity: "Auto aangesloten — connected/disconnected",
@@ -294,7 +301,13 @@ class EvSmartChargePanel extends HTMLElement {
   }
 
   _setupConfiguration() {
-    return this._attributes("sensor", "setup_status").configuration || {};
+    const setup = this._attributes("sensor", "setup_status");
+    const checkConfiguration = Object.fromEntries(
+      Object.entries(setup.checks || {})
+        .filter(([, check]) => check && check.entity_id)
+        .map(([key, check]) => [key, check.entity_id])
+    );
+    return { ...checkConfiguration, ...(setup.configuration || {}) };
   }
 
   _notice(message, kind = "success") {

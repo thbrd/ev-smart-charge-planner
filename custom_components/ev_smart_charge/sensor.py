@@ -8,7 +8,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN
+from .const import CONF_CONTROL_MODE, CONF_TARIFF_PROVIDER, DOMAIN, SETUP_ENTITY_KEYS
 from .coordinator import EVSmartChargeCoordinator
 
 
@@ -194,10 +194,23 @@ class EVSensor(CoordinatorEntity[EVSmartChargeCoordinator], SensorEntity):
         if self.key == "test_status":
             return {"reason": simulation.get("reason", "—"), "mode": simulation.get("test_label", "—")}
         if self.key == "setup_status":
+            configuration = {
+                key: self.coordinator.options.get(key)
+                for key in SETUP_ENTITY_KEYS
+                if self.coordinator.options.get(key)
+            }
+            configuration.update(
+                {
+                    CONF_TARIFF_PROVIDER: self.coordinator.options.get(CONF_TARIFF_PROVIDER),
+                    CONF_CONTROL_MODE: self.coordinator.options.get(CONF_CONTROL_MODE),
+                }
+            )
             return {
-                "configuration": snapshot.get("configuration", {}),
+                # Read the canonical config-entry values directly. The
+                # panel must not depend on a previously cached snapshot.
+                "configuration": configuration,
                 "candidates": self.coordinator.discovery_candidates,
-                "checks": (data.get("connection_checks") or self.coordinator.connection_checks(snapshot)),
+                "checks": self.coordinator.connection_checks(snapshot),
             }
         if self.key in ("connection_test_status", "connection_test_reason"):
             return (data.get("connection_test") or {}).get("checks", {})

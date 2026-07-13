@@ -28,7 +28,7 @@ De integratie gebruikt GitHub-tags en releases. HACS toont daardoor versies in p
 De huidige stabiele versie is:
 
 ```text
-v0.5.6
+v0.5.7
 ```
 
 Na een nieuwe release:
