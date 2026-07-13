@@ -1,7 +1,7 @@
 {
   "domain": "ev_smart_charge",
   "name": "EV Smart Charge Planner",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "documentation": "https://github.com/thbrd/ev-smart-charge-planner",
   "issue_tracker": "https://github.com/thbrd/ev-smart-charge-planner/issues",
   "dependencies": ["frontend"],

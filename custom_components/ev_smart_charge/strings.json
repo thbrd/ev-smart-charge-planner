@@ -51,6 +51,25 @@
           "telegram_service": "Telegram-service",
           "telegram_chat_id": "Telegram chat-ID"
         }
+      },
+      "reconfigure": {
+        "title": "EV Smart Charge Planner koppelingen wijzigen",
+        "description": "Wijzig hier de auto-, laadpaal-, tarief- en zonne-entiteiten. De integratie test de koppelingen zonder de laadpaal te schakelen.",
+        "data": {
+          "soc_entity": "Auto SoC — accupercentage",
+          "plug_entity": "Auto aangesloten — connected/disconnected",
+          "charging_entity": "Auto laadstatus — charging/not charging",
+          "target_entity": "Auto doelpercentage — select (optioneel)",
+          "charger_state_entity": "Laadpaalstatus — charging/suspended/no EV",
+          "charger_switch_entity": "Laadpaal aan/uit — on/off",
+          "power_entity": "Laadvermogen — W",
+          "session_energy_entity": "Sessie-energie — kWh",
+          "tariff_entity": "Tarief + forecast",
+          "tariff_provider": "Energieprovider",
+          "solar_forecast_entity": "Zonneforecast — kWh (optioneel)",
+          "solar_now_entity": "Zonnevermogen nu — W (optioneel)",
+          "control_mode": "Besturingsmodus — monitor of HACS"
+        }
       }
     }
   },
@@ -77,5 +96,9 @@
         }
       }
     }
+  },
+  "abort": {
+    "reconfigure_successful": "De koppelingen zijn opgeslagen.",
+    "unknown_entry": "De EV Smart Charge-configuratie bestaat niet meer."
   }
 }

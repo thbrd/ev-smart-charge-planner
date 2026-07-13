@@ -28,7 +28,7 @@ De integratie gebruikt GitHub-tags en releases. HACS toont daardoor versies in p
 De huidige stabiele versie is:
 
 ```text
-v0.5.2
+v0.5.3
 ```
 
 Na een nieuwe release:
@@ -97,6 +97,19 @@ Vanaf v0.5.0 staat er een setup wizard in het sidebar-panel `EV Smart Charge`. D
 3. laat de koppelingen en energieprovider opslaan;
 4. voert een verbindingstest uit zonder de laadpaal te schakelen;
 5. staat standaard op `Alleen monitoren/testen (Node-RED)`.
+
+### Koppelingen controleren en wijzigen
+
+Onder `Apparaat en sensoren` toont het sidebar-panel nu per bron een live controle:
+
+- groen `Goed`: de gekozen entity bestaat en levert een bruikbare waarde;
+- oranje `Controleren`: de entity bestaat, maar bijvoorbeeld de tariefforecast bevat nog geen blokken;
+- rood `Niet goed`: de verplichte entity ontbreekt, bestaat niet meer of is tijdelijk onbeschikbaar;
+- grijs `Optioneel`: een niet-verplichte bron, zoals zonneforecast, is niet gekoppeld.
+
+Dezelfde koppelingen zijn ook te wijzigen via de native Home Assistant-configuratie:
+`Instellingen → Apparaten & diensten → Configuraties → EV Smart Charge Planner → Koppelingen wijzigen`.
+De knop opent de volledige auto-, laadpaal-, tarief- en zonnekeuze opnieuw. Na opslaan wordt de integratie automatisch met de nieuwe bronnen bijgewerkt. De actie schakelt de laadpaal niet.
 
 In deze standaardmodus leest de integratie de sensoren uit, berekent lokale plannen en toont testresultaten, maar zet zij nooit de laadpaal aan of uit. Daardoor kan de HACS-integratie naast de bestaande Node-RED-flow draaien tijdens het testen. Zet pas `HACS mag besturen` aan nadat Node-RED voor deze laadpaal is uitgeschakeld; gebruik nooit twee actieve besturingen tegelijk.
 
