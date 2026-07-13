@@ -28,7 +28,7 @@ De integratie gebruikt GitHub-tags en releases. HACS toont daardoor versies in p
 De huidige stabiele versie is:
 
 ```text
-v0.5.0
+v0.5.2
 ```
 
 Na een nieuwe release:
@@ -111,7 +111,7 @@ Het voorbeeld-dashboard staat in [`dashboards/ev-smart-charge-dashboard.yaml`](d
 3. Kopieer de inhoud van het YAML-bestand naar de dashboardconfiguratie.
 4. Controleer na opslaan of de entiteiten van de integratie dezelfde object-ID's hebben.
 
-Het sidebar-panel bevat laadplanning, sessiegegevens, dag-, maand- en jaaroverzichten, een setup wizard, verbindingstest, Telegraminstellingen en afzonderlijke Telegram-testknoppen. De sensorverbindingen en gevoelige opties blijven ook beschikbaar via de native Home Assistant-integratie-instellingen.
+Het sidebar-panel bevat laadplanning, sessiegegevens, dag-, maand- en jaaroverzichten, een setup wizard, verbindingstest, Telegraminstellingen en afzonderlijke Telegram-testknoppen. De pagina blijft staan tijdens sensorupdates: invoervelden, tabkeuze en knoppen worden niet opnieuw opgebouwd. Elke actie toont direct een bezig-, gelukt- of foutmelding en dubbele klikken worden geblokkeerd totdat de service klaar is. De panelresolver ondersteunt zowel de standaard entity-ID's als de bekende door Home Assistant geprefixte EV Smart Charge-ID's. De sensorverbindingen en gevoelige opties blijven ook beschikbaar via de native Home Assistant-integratie-instellingen.
 
 ## Testprocedure
 
@@ -138,6 +138,8 @@ Lokale ontwikkeltests kunnen worden uitgevoerd met:
 python3 tests/test_planner.py
 python3 -m compileall -q custom_components tests
 ```
+
+De frontend kan zonder browserbuild worden gecontroleerd met een Node.js-modulecheck. Na een update moet Home Assistant opnieuw worden gestart en moet de browser één keer hard worden vernieuwd; de panel-URL bevat bewust een cacheversie.
 
 ## Wat is inbegrepen
 

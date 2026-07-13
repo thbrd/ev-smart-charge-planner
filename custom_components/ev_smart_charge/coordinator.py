@@ -106,7 +106,11 @@ class EVSmartChargeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 data.pop(key, None)
         self.hass.config_entries.async_update_entry(self.entry, data=data)
         self.options = {**DEFAULTS, **data, **self.entry.options}
-        self.async_set_updated_data(self.data or {})
+        self.async_set_updated_data({
+            **(self.data or {}),
+            "snapshot": self.snapshot(),
+            "aggregates": self.history.aggregates(),
+        })
 
     async def async_test_connection(self) -> dict[str, Any]:
         """Validate configured sources without touching the charger."""
